@@ -43,7 +43,7 @@ const INITIAL_CATTLE = [
   },
   {
     id: "203",
-    tag: "#203",
+    tag: "Musashi #203",
     dob: "2022-03-08",
     sex: "Bull",
     generation: "F2",
@@ -69,7 +69,7 @@ const INITIAL_CATTLE = [
   },
   {
     id: "209",
-    tag: "#209",
+    tag: "Otsu #209",
     dob: "2022-03-22",
     sex: "Cow",
     generation: "F2",
@@ -139,7 +139,7 @@ const latestWeight = (a) => {
   return `${sorted[0].weight} lbs`;
 };
 
-const sexColor = (sex) => sex === "Bull" ? "#c1440e" : "#5a7a4e";
+const sexColor = (sex) => (sex === "Bull" || sex === "Steer") ? "#c1440e" : "#5a7a4e";
 
 // ── Password Gate ─────────────────────────────────────────────
 function PasswordGate({ onUnlock }) {
@@ -225,7 +225,7 @@ function PrintPreview({ cattle, onClose }) {
         {cattle.map(a => (
           <div key={a.id} style={{ marginBottom: 36, pageBreakInside: "avoid" }}>
             <div style={{ fontSize: 13, fontWeight: "bold", letterSpacing: 2, textTransform: "uppercase", borderBottom: "2px solid #2c2416", paddingBottom: 6, marginBottom: 12 }}>
-              {a.tag} {a.sex === "Bull" ? "♂" : "♀"} — {a.generation} {a.bloodline}
+              {a.tag} {(a.sex === "Bull" || a.sex === "Steer") ? "♂" : "♀"} — {a.generation} {a.bloodline}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 20px", marginBottom: 16 }}>
               <PrintField label="DOB" value={formatDate(a.dob)} />
@@ -453,7 +453,7 @@ export default function App() {
                   onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)"}>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <div style={{ width: 48, height: 48, borderRadius: 8, background: sexColor(a.sex), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-                      {a.sex === "Bull" ? "♂" : "♀"}
+                      {(a.sex === "Bull" || a.sex === "Steer") ? "♂" : "♀"}
                     </div>
                     <div>
                       <div style={{ fontWeight: "bold", fontSize: 18 }}>{a.tag}</div>
@@ -474,7 +474,7 @@ export default function App() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
               <div style={{ width: 56, height: 56, borderRadius: 10, background: sexColor(selectedAnimal.sex), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
-                {selectedAnimal.sex === "Bull" ? "♂" : "♀"}
+                {(selectedAnimal.sex === "Bull" || selectedAnimal.sex === "Steer") ? "♂" : "♀"}
               </div>
               <div>
                 <div style={{ fontSize: 26, fontWeight: "bold" }}>{selectedAnimal.tag}</div>
