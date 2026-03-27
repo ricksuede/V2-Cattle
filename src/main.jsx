@@ -1,4 +1,4 @@
-import React from 'react';import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 const INITIAL_CATTLE = [
   {
@@ -171,17 +171,17 @@ function PasswordGate({ onUnlock }) {
 export default function App() {
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("v2_auth") === "1");
   const unlock = () => { sessionStorage.setItem("v2_auth", "1"); setUnlocked(true); };
-  if (!unlocked) return <PasswordGate onUnlock={unlock} />;
-
   const [cattle, setCattle] = useStorage("hilltop_cattle", INITIAL_CATTLE);
   const [selected, setSelected] = useState(null);
-  const [view, setView] = useState("herd"); // herd | detail | add
+  const [view, setView] = useState("herd");
   const [addForm, setAddForm] = useState({ ...EMPTY_ANIMAL });
   const [newWeight, setNewWeight] = useState({ ...EMPTY_WEIGHT });
   const [newVax, setNewVax] = useState({ ...EMPTY_VAX });
   const [addWeightOpen, setAddWeightOpen] = useState(false);
   const [addVaxOpen, setAddVaxOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  if (!unlocked) return <PasswordGate onUnlock={unlock} />;
 
   const selectedAnimal = cattle.find(c => c.id === selected);
 
