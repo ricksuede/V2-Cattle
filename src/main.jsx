@@ -372,9 +372,7 @@ function SpreadsheetView({ cattle, onBack, onPrint }) {
 const tdS = { padding: "10px 12px", fontSize: 12 };
 
 // ── Main App ──────────────────────────────────────────────────
-export default function App() {
-  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("v2_auth") === "1");
-  const unlock = () => { sessionStorage.setItem("v2_auth", "1"); setUnlocked(true); };
+function HerdApp() {
   const [cattle, setCattle] = useStorage("hilltop_cattle", INITIAL_CATTLE);
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("herd");
@@ -385,7 +383,6 @@ export default function App() {
   const [addVaxOpen, setAddVaxOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  if (!unlocked) return <PasswordGate onUnlock={unlock} />;
   if (view === "print") return <PrintPreview cattle={cattle} onClose={() => setView("herd")} />;
   if (view === "sheet") return <SpreadsheetView cattle={cattle} onBack={() => setView("herd")} onPrint={() => setView("print")} />;
 
@@ -606,6 +603,14 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+
+export default function App() {
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("v2_auth") === "1");
+  const unlock = () => { sessionStorage.setItem("v2_auth", "1"); setUnlocked(true); };
+  if (!unlocked) return <PasswordGate onUnlock={unlock} />;
+  return <HerdApp />;
 }
 
 function Section({ title, children, action }) {
