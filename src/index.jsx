@@ -1,9 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './main.jsx'
+import NorthSLOAerial from './NorthSLOAerial.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <NorthSLOAerial />
   </React.StrictMode>
 )
