@@ -1,395 +1,428 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // ── Design tokens ─────────────────────────────────────────────
-const tk = {
-  dark:    '#0d1b2a',
-  slate:   '#16273a',
-  slateL:  '#1e3248',
-  gold:    '#c4a94a',
-  goldD:   '#a8902e',
-  goldT:   'rgba(196,169,74,0.12)',
-  sage:    '#4a7c5f',
-  sageL:   '#5e9275',
-  cream:   '#f8f4ed',
-  parch:   '#ede7db',
-  terra:   '#c4623a',
-  mist:    '#7a95aa',
-  body:    '#2a3545',
-  muted:   '#5a6e82',
-  border:  'rgba(255,255,255,0.08)',
-  borderD: 'rgba(0,0,0,0.10)',
+const C = {
+  ink:    '#06090f',
+  night:  '#0b1520',
+  deep:   '#101c2c',
+  slate:  '#182840',
+  steel:  '#1e3250',
+  gold:   '#c9a84c',
+  goldL:  '#dfc07a',
+  goldD:  '#a88030',
+  goldBg: 'rgba(201,168,76,0.09)',
+  goldBd: 'rgba(201,168,76,0.20)',
+  sage:   '#4d7a5c',
+  sageL:  '#62916f',
+  cream:  '#f0e8d4',
+  sand:   '#ddd4bb',
+  body:   '#2a3545',
+  text:   '#e6ddc8',
+  muted:  '#8a9eb5',
+  faint:  '#465a6e',
+  terra:  '#b84e28',
 };
+const D = "'Cormorant Garamond', Georgia, serif";
+const U = "'Inter', system-ui, -apple-system, sans-serif";
+const WRAP = { maxWidth: 1160, margin: '0 auto', padding: '0 48px' };
+const WRAP_N = { maxWidth: 900, margin: '0 auto', padding: '0 48px' };
 
-const sans  = "system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
-const serif = "Georgia,'Times New Roman',serif";
+// ── Global CSS ────────────────────────────────────────────────
+const GLOBAL_CSS = `
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:${C.ink};-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  ::selection{background:${C.gold};color:${C.ink};}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-33.334%)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes blinkDot{0%,100%{opacity:1}50%{opacity:0.15}}
+  @media(max-width:900px){
+    .hero-inner{flex-direction:column!important;}
+    .hero-map{display:none!important;}
+    .why-cols{grid-template-columns:1fr!important;}
+    .proc-row{flex-direction:column!important;gap:40px!important;}
+    .proc-line{display:none!important;}
+    .svc-row-grid{grid-template-columns:60px 1fr!important;}
+    .svc-price-col{display:none!important;}
+    .svc-detail-grid{grid-template-columns:1fr!important;}
+    .trust-grid{grid-template-columns:1fr 1fr!important;}
+    .pricing-grid{grid-template-columns:1fr 1fr!important;}
+    .proj-cards{grid-template-columns:1fr!important;}
+    .contact-grid{grid-template-columns:1fr!important;}
+    .cov-grid{grid-template-columns:1fr!important;}
+  }
+  @media(max-width:560px){
+    .pricing-grid{grid-template-columns:1fr!important;}
+    .trust-grid{grid-template-columns:1fr!important;}
+  }
+`;
 
-const wrap = { maxWidth: 1100, margin: '0 auto', padding: '0 24px' };
-const wrapN = { maxWidth: 860, margin: '0 auto', padding: '0 24px' };
+// ── Scroll-reveal hook ────────────────────────────────────────
+function useReveal(threshold = 0.12) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVis(true); io.disconnect(); } },
+      { threshold }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return [ref, vis];
+}
 
-// ── SVG Icons ─────────────────────────────────────────────────
-const Icon = ({ d, size = 22, color = 'currentColor', strokeWidth = 1.5 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
-    {d.map((p, i) => p.circle
-      ? <circle key={i} cx={p.circle[0]} cy={p.circle[1]} r={p.circle[2]} />
-      : <path key={i} d={p} />)}
-  </svg>
-);
-
-const icons = {
-  drone: [
-    { circle: [12, 12, 2.5] },
-    'M12 9.5V7M12 14.5v2.5',
-    'M9.5 12H7M14.5 12h2.5',
-    'M5.5 5.5l2 2M16.5 16.5l2 2M5.5 18.5l2-2M16.5 7.5l2-2',
-    { circle: [4, 4, 1.5] }, { circle: [20, 4, 1.5] },
-    { circle: [4, 20, 1.5] }, { circle: [20, 20, 1.5] },
-  ],
-  map: [
-    'M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z',
-    'M8 2v16M16 6v16',
-  ],
-  grid: [
-    'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
-  ],
-  eye: [
-    'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z',
-    { circle: [12, 12, 3] },
-  ],
-  calendar: [
-    'M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z',
-    'M16 2v4M8 2v4M3 10h18',
-  ],
-  fence: [
-    'M3 3v18M9 3v18M15 3v18M21 3v18',
-    'M3 8h18M3 16h18',
-  ],
-  layers: [
-    'M12 2L2 7l10 5 10-5-10-5z',
-    'M2 17l10 5 10-5',
-    'M2 12l10 5 10-5',
-  ],
-  wave: [
-    'M2 12c1.5-3 3-4.5 4.5-4.5S9 9 10.5 9s3-1.5 4.5-1.5S18 9 19.5 9 21 7.5 22 6',
-    'M2 18c1.5-3 3-4.5 4.5-4.5S9 15 10.5 15s3-1.5 4.5-1.5S18 15 19.5 15 21 13.5 22 12',
-  ],
-  camera: [
-    'M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z',
-    { circle: [12, 13, 4] },
-  ],
-  check: ['M20 6L9 17l-5-5'],
-  arrow: ['M5 12h14M12 5l7 7-7 7'],
-  menu: ['M3 12h18M3 6h18M3 18h18'],
-  x: ['M18 6L6 18M6 6l12 12'],
-  mail: [
-    'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z',
-    'M22 6l-10 7L2 6',
-  ],
-  cert: [
-    { circle: [12, 8, 6] },
-    'M15.477 12.89L17 22l-5-3-5 3 1.523-9.11',
-  ],
-  shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
-  pin: [
-    'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z',
-    { circle: [12, 10, 3] },
-  ],
-};
-
-// ── Hero Section ──────────────────────────────────────────────
-function Hero() {
+function Reveal({ children, delay = 0 }) {
+  const [ref, vis] = useReveal();
   return (
-    <section id="home" style={{
-      background: `linear-gradient(160deg, ${tk.dark} 0%, ${tk.slate} 60%, #0e2235 100%)`,
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* Grid overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: `linear-gradient(rgba(196,169,74,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(196,169,74,0.05) 1px, transparent 1px)`,
-        backgroundSize: '52px 52px',
-      }} />
-      {/* Radial glow */}
-      <div style={{
-        position: 'absolute', top: '30%', right: '10%',
-        width: 600, height: 600,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(196,169,74,0.07) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-      {/* Decorative corner coords */}
-      <div style={{
-        position: 'absolute', top: 100, right: 32,
-        fontFamily: sans, fontSize: 11, letterSpacing: 2,
-        color: 'rgba(196,169,74,0.35)',
-        lineHeight: 1.8,
-      }}>
-        35.6269° N<br/>120.6910° W<br/>PASO ROBLES, CA
-      </div>
-      <div style={{ ...wrap, position: 'relative', zIndex: 1, padding: '120px 24px 80px' }}>
-        <div style={{ maxWidth: 700 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 10,
-            background: tk.goldT,
-            border: `1px solid rgba(196,169,74,0.25)`,
-            borderRadius: 4,
-            padding: '6px 14px',
-            marginBottom: 32,
-          }}>
-            <Icon d={icons.drone} size={14} color={tk.gold} />
-            <span style={{ fontFamily: sans, fontSize: 11, letterSpacing: 2.5, textTransform: 'uppercase', color: tk.gold }}>
-              North SLO County · Part 107 Certified
-            </span>
-          </div>
-
-          <h1 style={{
-            fontFamily: serif, fontSize: 'clamp(48px, 7vw, 82px)',
-            fontWeight: 400, lineHeight: 1.05, color: tk.cream,
-            margin: '0 0 28px',
-            letterSpacing: '-0.5px',
-          }}>
-            Eyes on<br />
-            <span style={{ color: tk.gold }}>your land.</span>
-          </h1>
-
-          <p style={{
-            fontFamily: sans, fontSize: 'clamp(16px, 2vw, 19px)',
-            lineHeight: 1.7, color: 'rgba(248,244,237,0.72)',
-            maxWidth: 580, margin: '0 0 44px',
-          }}>
-            Precision drone mapping for small wineries and rural properties
-            in North SLO County — the operations the big ag-tech firms
-            won't bother with because the acreage isn't big enough for them.
-          </p>
-
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            <a href="#services" onClick={e => { e.preventDefault(); document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }); }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: tk.gold, color: tk.dark,
-                padding: '14px 28px', borderRadius: 6,
-                fontFamily: sans, fontSize: 14, fontWeight: 700,
-                letterSpacing: 0.5, textDecoration: 'none',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = tk.goldD}
-              onMouseLeave={e => e.currentTarget.style.background = tk.gold}>
-              View Services
-              <Icon d={icons.arrow} size={16} color={tk.dark} />
-            </a>
-            <a href="#contact" onClick={e => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }); }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'transparent',
-                border: `1.5px solid rgba(248,244,237,0.3)`,
-                color: tk.cream,
-                padding: '14px 28px', borderRadius: 6,
-                fontFamily: sans, fontSize: 14, fontWeight: 600,
-                letterSpacing: 0.5, textDecoration: 'none',
-                transition: 'border-color 0.2s, background 0.2s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = tk.gold; e.currentTarget.style.background = tk.goldT; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(248,244,237,0.3)'; e.currentTarget.style.background = 'transparent'; }}>
-              Get a Free Map
-            </a>
-          </div>
-
-          {/* Stats strip */}
-          <div style={{
-            display: 'flex', gap: 40, marginTop: 72,
-            flexWrap: 'wrap', borderTop: `1px solid rgba(255,255,255,0.08)`,
-            paddingTop: 32,
-          }}>
-            {[
-              ['FAA Part 107', 'Certified & insured'],
-              ['15–200 acres', 'Sweet spot coverage'],
-              ['7 days', 'Report turnaround'],
-              ['$0', 'First portfolio flight'],
-            ].map(([num, label]) => (
-              <div key={num}>
-                <div style={{ fontFamily: serif, fontSize: 26, color: tk.cream, fontWeight: 400 }}>{num}</div>
-                <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: tk.mist, marginTop: 4 }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
+    <div ref={ref} style={{
+      opacity: vis ? 1 : 0,
+      transform: vis ? 'none' : 'translateY(30px)',
+      transition: `opacity 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}s, transform 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}s`,
+    }}>{children}</div>
   );
 }
 
-// ── Service data ──────────────────────────────────────────────
+// ── Eyebrow ───────────────────────────────────────────────────
+function Eyebrow({ children, color = C.gold, dark = false }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22,
+    }}>
+      <span style={{ display: 'block', width: 28, height: 1, background: color, flexShrink: 0 }} />
+      <span style={{
+        fontFamily: U, fontSize: 10, fontWeight: 600,
+        letterSpacing: '0.22em', textTransform: 'uppercase', color,
+      }}>{children}</span>
+    </div>
+  );
+}
+
+// ── Aerial Map SVG ────────────────────────────────────────────
+function AerialMap() {
+  const W = 560, H = 540, P = 44;
+  const iW = W - 2 * P, iH = H - 2 * P;
+  const bW = iW / 3, bH = iH / 2;
+  const cx = W / 2, cy = H / 2;
+
+  const rows = Array.from({ length: 35 }, (_, i) => {
+    const y = P + 4 + i * 13;
+    return y < H - P - 4
+      ? <line key={i} x1={P + 2} y1={y} x2={W - P - 2} y2={y} stroke="rgba(201,168,76,0.10)" strokeWidth="0.65" />
+      : null;
+  });
+
+  const passes = Array.from({ length: 9 }, (_, i) => {
+    const y = P + 22 + i * 56;
+    const right = i % 2 === 0;
+    const x1 = right ? P + 14 : W - P - 14;
+    const x2 = right ? W - P - 14 : P + 14;
+    const nx = right ? W - P - 14 : P + 14;
+    const ny = P + 22 + (i + 1) * 56;
+    return (
+      <g key={i}>
+        <line x1={x1} y1={y} x2={x2} y2={y} stroke="rgba(74,150,230,0.32)" strokeWidth="1.1" strokeDasharray="7 5" />
+        {i < 8 && <line x1={nx} y1={y} x2={nx} y2={ny} stroke="rgba(74,150,230,0.22)" strokeWidth="1.1" strokeDasharray="3 5" />}
+      </g>
+    );
+  });
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} fill="none" xmlns="http://www.w3.org/2000/svg"
+      style={{ width: '100%', maxWidth: 560, display: 'block' }}>
+      <defs>
+        <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(74,180,255,0.18)" />
+          <stop offset="100%" stopColor="rgba(74,180,255,0)" />
+        </linearGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <radialGradient id="vigRad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="rgba(0,0,0,0)" />
+          <stop offset="100%" stopColor="rgba(6,9,15,0.55)" />
+        </radialGradient>
+      </defs>
+
+      {/* Background */}
+      <rect width={W} height={H} fill={C.ink} rx="6" />
+
+      {/* Analysis fills */}
+      <rect x={P+2} y={P+2} width={bW-4} height={bH-4} fill="rgba(77,122,92,0.18)" rx="2" />
+      <rect x={P+bW+2} y={P+2} width={bW-4} height={bH-4} fill="rgba(77,122,92,0.11)" rx="2" />
+      <rect x={P+2*bW+2} y={P+2} width={bW-4} height={bH-4} fill="rgba(77,122,92,0.14)" rx="2" />
+      <rect x={P+2} y={P+bH+2} width={bW-4} height={bH-4} fill="rgba(77,122,92,0.09)" rx="2" />
+      <rect x={P+bW+2} y={P+bH+2} width={bW-4} height={bH-4} fill="rgba(184,78,40,0.14)" rx="2" />
+      <rect x={P+2*bW+2} y={P+bH+2} width={bW-4} height={bH-4} fill="rgba(77,122,92,0.12)" rx="2" />
+
+      {/* Vine rows */}
+      {rows}
+
+      {/* Block grid */}
+      <line x1={P+bW} y1={P} x2={P+bW} y2={H-P} stroke="rgba(201,168,76,0.20)" strokeWidth="1" />
+      <line x1={P+2*bW} y1={P} x2={P+2*bW} y2={H-P} stroke="rgba(201,168,76,0.20)" strokeWidth="1" />
+      <line x1={P} y1={P+bH} x2={W-P} y2={P+bH} stroke="rgba(201,168,76,0.20)" strokeWidth="1" />
+
+      {/* Flight passes */}
+      {passes}
+
+      {/* Property boundary */}
+      <rect x={P} y={P} width={iW} height={iH}
+        stroke="rgba(201,168,76,0.62)" strokeWidth="1.5" strokeDasharray="10 5" fill="none" />
+
+      {/* Corner markers */}
+      {[[P,P],[W-P,P],[P,H-P],[W-P,H-P]].map(([x,y], i) => (
+        <g key={i} filter="url(#glow)">
+          <circle cx={x} cy={y} r={3.5} fill={C.gold} />
+          <circle cx={x} cy={y} r={8} stroke="rgba(201,168,76,0.40)" strokeWidth="1" fill="none" />
+        </g>
+      ))}
+
+      {/* Drone crosshair */}
+      <g filter="url(#glow)">
+        <circle cx={cx} cy={cy} r={2.5} fill="white" />
+        <circle cx={cx} cy={cy} r={12} stroke="rgba(255,255,255,0.52)" strokeWidth="1" fill="none">
+          <animate attributeName="r" values="12;17;12" dur="2.8s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.52;0.08;0.52" dur="2.8s" repeatCount="indefinite" />
+        </circle>
+        <circle cx={cx} cy={cy} r={22} stroke="rgba(255,255,255,0.18)" strokeWidth="0.75" fill="none">
+          <animate attributeName="r" values="22;30;22" dur="2.8s" begin="0.7s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.18;0.03;0.18" dur="2.8s" begin="0.7s" repeatCount="indefinite" />
+        </circle>
+      </g>
+      <line x1={cx-34} y1={cy} x2={cx-17} y2={cy} stroke="rgba(255,255,255,0.38)" strokeWidth="1" />
+      <line x1={cx+17} y1={cy} x2={cx+34} y2={cy} stroke="rgba(255,255,255,0.38)" strokeWidth="1" />
+      <line x1={cx} y1={cy-34} x2={cx} y2={cy-17} stroke="rgba(255,255,255,0.38)" strokeWidth="1" />
+      <line x1={cx} y1={cy+17} x2={cx} y2={cy+34} stroke="rgba(255,255,255,0.38)" strokeWidth="1" />
+
+      {/* Scan line */}
+      <rect x={P} y={P} width={iW} height={38} fill="url(#sg)">
+        <animateTransform attributeName="transform" type="translate"
+          values="0 0;0 454" dur="5s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1;1;0" keyTimes="0;0.84;1" dur="5s" repeatCount="indefinite" />
+      </rect>
+
+      {/* Vignette */}
+      <rect width={W} height={H} fill="url(#vigRad)" rx="6" />
+
+      {/* Legend */}
+      <rect x={W-P-76} y={P+8} width={9} height={9} fill="rgba(77,122,92,0.7)" rx="1" />
+      <text x={W-P-63} y={P+17} fill="rgba(255,255,255,0.38)" fontSize="7.5" fontFamily="monospace" letterSpacing="0.5">HEALTHY</text>
+      <rect x={W-P-76} y={P+25} width={9} height={9} fill="rgba(184,78,40,0.7)" rx="1" />
+      <text x={W-P-63} y={P+34} fill="rgba(255,255,255,0.38)" fontSize="7.5" fontFamily="monospace" letterSpacing="0.5">STRESS</text>
+
+      {/* Coord readout */}
+      <rect x={P} y={H-P-46} width={154} height={40} fill="rgba(6,9,15,0.88)" rx="3" />
+      <text x={P+10} y={H-P-28} fill="rgba(201,168,76,0.72)" fontSize="8" fontFamily="monospace" letterSpacing="0.8">35.6269° N  120.6910° W</text>
+      <text x={P+10} y={H-P-13} fill="rgba(255,255,255,0.36)" fontSize="7.5" fontFamily="monospace" letterSpacing="0.5">ALT 118m  ·  SPD 7.2m/s</text>
+
+      {/* Scale bar */}
+      <line x1={W-P-84} y1={H-P-14} x2={W-P} y2={H-P-14} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
+      <line x1={W-P-84} y1={H-P-19} x2={W-P-84} y2={H-P-9} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
+      <line x1={W-P} y1={H-P-19} x2={W-P} y2={H-P-9} stroke="rgba(255,255,255,0.42)" strokeWidth="1" />
+      <text x={W-P-42} y={H-P-22} fill="rgba(255,255,255,0.36)" fontSize="7.5" fontFamily="monospace" textAnchor="middle" letterSpacing="0.5">100 m</text>
+
+      {/* Status */}
+      <rect x={P} y={H-P-70} width={90} height={18} fill="rgba(77,122,92,0.22)" rx="2" />
+      <circle cx={P+12} cy={H-P-61} r={3} fill={C.sage}>
+        <animate attributeName="opacity" values="1;0.15;1" dur="1.8s" repeatCount="indefinite" />
+      </circle>
+      <text x={P+21} y={H-P-57} fill="rgba(98,145,111,0.9)" fontSize="8" fontFamily="monospace" letterSpacing="0.5">CAPTURING</text>
+    </svg>
+  );
+}
+
+// ── Marquee ticker ────────────────────────────────────────────
+const TICKER_TEXT = 'PART 107 CERTIFIED  ·  PASO ROBLES  ·  ADELAIDA DISTRICT  ·  TEMPLETON  ·  ABSENTEE RANCH MONITORING  ·  VINEYARD CANOPY MAPPING  ·  COASTAL BLUFF DOCUMENTATION  ·  NORTH SLO COUNTY  ·  ';
+
+function Marquee() {
+  return (
+    <div style={{ background: C.gold, overflow: 'hidden', padding: '13px 0', userSelect: 'none' }}>
+      <div style={{
+        display: 'inline-block', whiteSpace: 'nowrap',
+        animation: 'marquee 36s linear infinite',
+      }}>
+        {[TICKER_TEXT, TICKER_TEXT, TICKER_TEXT].map((t, i) => (
+          <span key={i} style={{
+            fontFamily: U, fontSize: 10.5, fontWeight: 700,
+            letterSpacing: '0.18em', color: C.ink,
+          }}>{t}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Services data ─────────────────────────────────────────────
 const SERVICES = [
   {
     id: 'vineyard',
     phase: 'Phase 1 — Launch Now',
-    phaseColor: tk.gold,
-    icon: icons.grid,
+    phaseColor: C.gold,
     title: 'Vineyard Canopy & Frost Mapping',
-    tagline: 'Know your blocks before the season turns.',
-    desc: 'A stitched orthomosaic (top-down aerial map) of your vineyard with frost pockets, canopy gaps, vigor variation, and dead spots clearly flagged. Delivered as a georeferenced TIFF plus a 1–2 page PDF report. No portal login, no app to learn — just the map and the findings in your inbox.',
-    deliverable: 'Orthomosaic + annotated PDF report',
-    pricing: [
-      ['Under 20 acres', '$300'],
-      ['20–50 acres', '$450'],
-      ['Repeat visit, same season', '$250'],
-    ],
-    why: "Frost season starts before April. Harvest stress mapping runs August–September. Seasonal urgency is built in — it's the natural reason to call.",
+    tagline: 'Know which blocks are under stress before the season turns.',
+    desc: "A stitched orthomosaic (top-down aerial map) of your vineyard with frost pockets, canopy gaps, vigor variation, and dead spots clearly flagged. Delivered as a georeferenced TIFF plus a 1–2 page PDF report. No portal login, no app — just the map and the findings in your inbox.",
+    deliverable: 'Orthomosaic + annotated PDF report, emailed within 7 days',
+    priceFrom: '$300',
+    priceSub: 'starting per flight',
+    pricing: [['Under 20 acres', '$300'], ['20–50 acres', '$450'], ['Repeat visit, same season', '$250']],
   },
   {
     id: 'ranch',
     phase: 'Phase 2 — Month 4+',
-    phaseColor: tk.sage,
-    icon: icons.fence,
+    phaseColor: C.sage,
     title: 'Absentee Ranch Monitoring',
-    tagline: 'Monthly eyes on property you can\'t visit every week.',
-    desc: 'Regular flights over your rural property — fence lines, water troughs, livestock counts, outbuildings, trespasser or dumping evidence. Each visit produces a dated PDF with GPS-tagged photos delivered within 24 hours. The baseline onboarding flight includes a full-property orthomosaic and 4K perimeter video for your records.',
-    deliverable: 'Monthly/weekly PDF report + GPS-tagged photos',
-    pricing: [
-      ['Monthly visit', '$150/mo'],
-      ['Weekly visits', '$400/mo'],
-      ['Onboarding flight (one-time)', '$600'],
-    ],
-    why: 'Designed for absentee owners in LA, the Bay Area, or the Central Valley who own 20–200 acres in Adelaida, Creston, Shandon, or San Miguel.',
+    tagline: 'Monthly eyes on property you cannot visit every week.',
+    desc: "Regular flights over your rural property — fence lines, water troughs, livestock counts, outbuildings, trespasser or dumping evidence. Each visit produces a dated PDF with GPS-tagged photos delivered within 24 hours. The onboarding flight includes a full-property orthomosaic and 4K perimeter video for your permanent records.",
+    deliverable: 'PDF report + GPS-tagged photos within 24 hours of flight',
+    priceFrom: '$150',
+    priceSub: 'per monthly visit',
+    pricing: [['Onboarding flight (one-time)', '$600'], ['Monthly visits', '$150 / mo'], ['Weekly visits', '$400 / mo']],
   },
   {
     id: 'listing',
     phase: 'Phase 3 — Month 7+',
-    phaseColor: tk.terra,
-    icon: icons.layers,
+    phaseColor: C.terra,
     title: 'Pre-Listing Rural Property Maps',
     tagline: 'Ag and ranch listings deserve better than a cell phone photo.',
-    desc: 'A complete aerial documentation package for rural listings: 4K video walkthrough (perimeter and key features), orthomosaic with annotated water sources, structures, and oak coverage, drone stills for MLS use, and an optional 3D parcel model. Built to the specs that the four to six North County ag-and-ranch agents actually want.',
-    deliverable: '4K video + orthomosaic + MLS-ready stills + annotated parcel map',
-    pricing: [
-      ['Under 50 acres', '$750'],
-      ['50–200 acres', '$1,100'],
-      ['200+ acres', '$1,500+'],
-    ],
-    why: 'Targeted at the small group of agents who specialize in ag/ranch in North County — not the general residential herd.',
+    desc: "A complete aerial documentation package: 4K video walkthrough, orthomosaic with annotated water sources, structures, and oak coverage, drone stills for MLS, optional 3D parcel model. Built to the specs the North County ag-and-ranch agents actually use.",
+    deliverable: '4K video + orthomosaic + MLS stills + annotated parcel map',
+    priceFrom: '$750',
+    priceSub: 'per listing',
+    pricing: [['Under 50 acres', '$750'], ['50–200 acres', '$1,100'], ['200+ acres', '$1,500+']],
   },
   {
     id: 'bluff',
     phase: 'Phase 3 — Month 7+',
-    phaseColor: tk.mist,
-    icon: icons.wave,
+    phaseColor: '#6a9ab0',
     title: 'Coastal Bluff Erosion Documentation',
     tagline: 'Baseline data before the next storm season.',
-    desc: 'Quarterly aerial documentation of bluff edge position, face erosion, drainage cuts, and structural changes. Time-stamped and GPS-accurate for insurance claims, legal disputes, or HOA maintenance planning. Annual archive subscriptions include post-storm emergency flights following Pacific storm events.',
+    desc: "Quarterly aerial documentation of bluff edge position, face erosion, drainage cuts, and structural changes. Time-stamped and GPS-accurate for insurance claims, legal disputes, or HOA maintenance planning. Annual subscriptions include post-storm emergency flights.",
     deliverable: 'Quarterly report + elevation profile + archived comparison imagery',
-    pricing: [
-      ['Individual homeowner', '$400/quarter'],
-      ['HOA (5+ properties)', '$1,200/quarter'],
-      ['Annual archive sub', '$1,500/yr (includes storm flights)'],
-    ],
-    why: 'Once one Cayucos or Cambria HOA signs, they talk. The whole block is a referral pool.',
+    priceFrom: '$400',
+    priceSub: 'per quarter',
+    pricing: [['Individual homeowner', '$400 / quarter'], ['HOA (5+ properties)', '$1,200 / quarter'], ['Annual archive sub', '$1,500 / year']],
   },
 ];
 
-// ── Services Section ──────────────────────────────────────────
-function ServiceCard({ svc, index }) {
-  const [expanded, setExpanded] = useState(false);
-  const [hovered, setHovered] = useState(false);
+// ── Service row ───────────────────────────────────────────────
+function ServiceRow({ svc, index, isLast }) {
+  const [open, setOpen] = useState(false);
+  const [hov, setHov] = useState(false);
+  const scrollTo = id => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: hovered ? tk.slateL : tk.slate,
-        border: `1px solid ${hovered ? 'rgba(196,169,74,0.25)' : tk.border}`,
-        borderRadius: 10,
-        padding: '32px',
-        transition: 'background 0.2s, border-color 0.2s',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
-      }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 8, flexShrink: 0,
-            background: `${svc.phaseColor}18`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon d={svc.icon} size={20} color={svc.phaseColor} />
+    <div style={{ borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="svc-row-grid"
+        onClick={() => setOpen(v => !v)}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '80px 1fr 210px',
+          gap: '0 36px',
+          padding: '44px 0',
+          cursor: 'pointer',
+          background: hov ? 'rgba(255,255,255,0.018)' : 'transparent',
+          transition: 'background 0.25s',
+          alignItems: 'start',
+        }}>
+
+        {/* Number */}
+        <div style={{
+          fontFamily: D, fontSize: 60, fontWeight: 300, lineHeight: 1,
+          color: `rgba(201,168,76,0.16)`,
+          paddingTop: 6, userSelect: 'none',
+          letterSpacing: '-0.03em',
+        }}>
+          {String(index + 1).padStart(2, '0')}
+        </div>
+
+        {/* Content */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: svc.phaseColor, display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontFamily: U, fontSize: 10, fontWeight: 600, letterSpacing: '0.20em', textTransform: 'uppercase', color: svc.phaseColor }}>
+              {svc.phase}
+            </span>
           </div>
-          <div>
-            <div style={{
-              fontFamily: sans, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-              color: svc.phaseColor, marginBottom: 6,
-            }}>{svc.phase}</div>
-            <h3 style={{
-              fontFamily: serif, fontSize: 22, fontWeight: 400,
-              color: tk.cream, margin: 0, lineHeight: 1.25,
-            }}>{svc.title}</h3>
+          <h3 style={{
+            fontFamily: D, fontSize: 'clamp(28px, 3vw, 40px)', fontWeight: 400,
+            color: C.text, lineHeight: 1.1, letterSpacing: '-0.01em',
+          }}>{svc.title}</h3>
+          <p style={{ fontFamily: U, fontSize: 14, color: C.muted, lineHeight: 1.6, marginTop: 10 }}>
+            {svc.tagline}
+          </p>
+        </div>
+
+        {/* Price + toggle */}
+        <div className="svc-price-col" style={{ textAlign: 'right', paddingTop: 26 }}>
+          <div style={{ fontFamily: D, fontSize: 30, fontWeight: 400, color: C.gold, letterSpacing: '-0.01em', lineHeight: 1 }}>
+            {svc.priceFrom}
+          </div>
+          <div style={{ fontFamily: U, fontSize: 11, color: C.faint, marginTop: 5 }}>{svc.priceSub}</div>
+          <div style={{
+            marginTop: 18, fontFamily: U, fontSize: 11, fontWeight: 500,
+            letterSpacing: '0.10em', textTransform: 'uppercase',
+            color: open ? C.gold : C.faint,
+            transition: 'color 0.2s',
+          }}>
+            {open ? '— close' : '+ details'}
           </div>
         </div>
-        <span style={{
-          fontFamily: sans, fontSize: 11, color: tk.mist,
-          whiteSpace: 'nowrap', marginTop: 6,
-        }}>0{index + 1} / 04</span>
       </div>
 
-      <p style={{ fontFamily: sans, fontSize: 15, lineHeight: 1.65, color: 'rgba(248,244,237,0.65)', margin: 0 }}>
-        {svc.tagline}
-      </p>
-
-      {/* Pricing quick-view */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {svc.pricing.map(([label, price]) => (
-          <div key={label} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '8px 14px',
-            background: 'rgba(0,0,0,0.2)', borderRadius: 6,
-          }}>
-            <span style={{ fontFamily: sans, fontSize: 13, color: 'rgba(248,244,237,0.6)' }}>{label}</span>
-            <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, color: tk.gold }}>{price}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Expand / collapse */}
-      <button
-        onClick={() => setExpanded(v => !v)}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
-          fontFamily: sans, fontSize: 13, color: tk.mist, letterSpacing: 0.5,
-          transition: 'color 0.2s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = tk.cream}
-        onMouseLeave={e => e.currentTarget.style.color = tk.mist}>
-        {expanded ? 'Less detail' : 'Full details'}
-        <span style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform 0.2s' }}>›</span>
-      </button>
-
-      {expanded && (
-        <div style={{
-          borderTop: `1px solid ${tk.border}`,
-          paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 14,
-          animation: 'fadeIn 0.2s ease',
+      {/* Expanded panel */}
+      {open && (
+        <div className="svc-detail-grid" style={{
+          display: 'grid', gridTemplateColumns: '1fr 300px',
+          gap: '0 64px', alignItems: 'start',
+          paddingLeft: 80 + 36, paddingBottom: 52, paddingRight: 0,
+          animation: 'fadeIn 0.3s ease',
         }}>
-          <p style={{ fontFamily: sans, fontSize: 14, lineHeight: 1.7, color: 'rgba(248,244,237,0.70)', margin: 0 }}>
-            {svc.desc}
-          </p>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <Icon d={icons.check} size={15} color={svc.phaseColor} strokeWidth={2.5} />
-            <span style={{ fontFamily: sans, fontSize: 13, color: 'rgba(248,244,237,0.55)' }}>
-              Deliverable: {svc.deliverable}
-            </span>
+          <div>
+            <p style={{ fontFamily: U, fontSize: 15, lineHeight: 1.82, color: 'rgba(230,221,200,0.62)', marginBottom: 22 }}>
+              {svc.desc}
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '11px 16px',
+              background: 'rgba(201,168,76,0.06)',
+              border: `1px solid rgba(201,168,76,0.14)`,
+              borderRadius: 4,
+            }}>
+              <span style={{ fontFamily: U, fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.65)', whiteSpace: 'nowrap' }}>Deliverable</span>
+              <span style={{ width: 1, height: 14, background: 'rgba(201,168,76,0.2)', flexShrink: 0 }} />
+              <span style={{ fontFamily: U, fontSize: 13, color: C.muted, lineHeight: 1.5 }}>{svc.deliverable}</span>
+            </div>
           </div>
-          <div style={{
-            background: `${svc.phaseColor}0e`, border: `1px solid ${svc.phaseColor}20`,
-            borderRadius: 6, padding: '12px 14px',
-          }}>
-            <span style={{ fontFamily: sans, fontSize: 12, lineHeight: 1.6, color: `${svc.phaseColor}cc` }}>
-              {svc.why}
-            </span>
+          <div>
+            {svc.pricing.map(([label, price]) => (
+              <div key={label} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '13px 0', borderBottom: '1px solid rgba(255,255,255,0.06)',
+              }}>
+                <span style={{ fontFamily: U, fontSize: 13, color: C.faint }}>{label}</span>
+                <span style={{ fontFamily: D, fontSize: 22, color: C.gold, fontWeight: 400 }}>{price}</span>
+              </div>
+            ))}
+            <button onClick={e => { e.stopPropagation(); scrollTo('contact'); }}
+              style={{
+                marginTop: 26, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontFamily: U, fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase',
+                color: C.text, display: 'flex', alignItems: 'center', gap: 10,
+                borderBottom: `1px solid ${C.gold}`, paddingBottom: 4,
+                transition: 'color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = C.gold}
+              onMouseLeave={e => e.currentTarget.style.color = C.text}>
+              Schedule a flight
+              <span style={{ fontSize: 14 }}>→</span>
+            </button>
           </div>
         </div>
       )}
@@ -397,208 +430,307 @@ function ServiceCard({ svc, index }) {
   );
 }
 
-function Services() {
+// ── Nav ───────────────────────────────────────────────────────
+function Nav({ scrolled }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const go = (id) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
+
   return (
-    <section id="services" style={{ background: tk.dark, padding: '100px 0' }}>
-      <div style={wrap}>
-        <div style={{ marginBottom: 60 }}>
-          <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: tk.gold, marginBottom: 16 }}>
-            Service Lines
-          </div>
-          <h2 style={{ fontFamily: serif, fontSize: 'clamp(34px, 4vw, 52px)', fontWeight: 400, color: tk.cream, margin: '0 0 20px', lineHeight: 1.1 }}>
-            Four services.<br />One network.
-          </h2>
-          <p style={{ fontFamily: sans, fontSize: 16, lineHeight: 1.7, color: tk.mist, maxWidth: 600, margin: 0 }}>
-            Sequenced by speed-to-first-dollar and relationship leverage — not by what the drone can do.
-            Phase 1 launches first because it has the warmest leads and the highest per-job margin.
-          </p>
-        </div>
+    <>
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
+        height: 68,
+        background: scrolled ? `rgba(6,9,15,0.92)` : 'transparent',
+        backdropFilter: scrolled ? 'blur(14px)' : 'none',
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
+        transition: 'background 0.35s, border-color 0.35s, backdrop-filter 0.35s',
+        display: 'flex', alignItems: 'center',
+        padding: '0 48px',
+      }}>
+        <div style={{ maxWidth: 1160, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
-          gap: 20,
-        }}>
-          {SERVICES.map((svc, i) => (
-            <ServiceCard key={svc.id} svc={svc} index={i} />
-          ))}
-        </div>
+          {/* Logo */}
+          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 11 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 6,
+              border: `1px solid rgba(201,168,76,0.25)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(201,168,76,0.08)',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="2.5" />
+                <path d="M12 9.5V7M12 14.5v2.5M9.5 12H7M14.5 12h2.5" />
+                <path d="M5.5 5.5l2 2M16.5 16.5l2 2M5.5 18.5l2-2M16.5 7.5l2-2" />
+                <circle cx="4" cy="4" r="1.5" /><circle cx="20" cy="4" r="1.5" />
+                <circle cx="4" cy="20" r="1.5" /><circle cx="20" cy="20" r="1.5" />
+              </svg>
+            </div>
+            <span style={{ fontFamily: D, fontSize: 16, fontWeight: 400, color: C.cream, letterSpacing: '0.02em' }}>
+              North SLO Aerial
+            </span>
+          </button>
 
-        {/* Year 2 teaser */}
-        <div style={{
-          marginTop: 20, borderRadius: 10, padding: '28px 32px',
-          background: 'rgba(255,255,255,0.03)',
-          border: `1px dashed rgba(255,255,255,0.10)`,
-          display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 8, flexShrink: 0,
-            background: 'rgba(122,149,170,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon d={icons.camera} size={20} color={tk.mist} />
+          {/* Links */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
+            {['Services', 'Pricing', 'Coverage', 'Contact'].map(l => (
+              <button key={l} onClick={() => go(l.toLowerCase())}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  fontFamily: U, fontSize: 12, fontWeight: 500,
+                  letterSpacing: '0.06em', color: 'rgba(230,221,200,0.55)',
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = C.cream}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(230,221,200,0.55)'}>
+                {l}
+              </button>
+            ))}
+            <button onClick={() => go('contact')}
+              style={{
+                background: C.gold, color: C.ink, border: 'none', cursor: 'pointer',
+                padding: '9px 20px', borderRadius: 4,
+                fontFamily: U, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = C.goldD}
+              onMouseLeave={e => e.currentTarget.style.background = C.gold}>
+              Free Map
+            </button>
           </div>
-          <div>
-            <div style={{ fontFamily: sans, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: tk.mist, marginBottom: 4 }}>
-              Year 2+ — Passion Play
-            </div>
-            <div style={{ fontFamily: serif, fontSize: 18, color: 'rgba(248,244,237,0.55)', fontWeight: 400 }}>
-              Historic Site & Abandoned-Place Documentation
-            </div>
-          </div>
-          <p style={{ fontFamily: sans, fontSize: 13, color: 'rgba(122,149,170,0.7)', lineHeight: 1.6, margin: 0, flex: 1, minWidth: 200 }}>
-            Every historic-site flight is portfolio content. The YouTube, the songs, the eventual coffee-table book —
-            this is the creative layer that builds inbound for the four revenue lines above. Not a day-one priority. A decade-long asset.
-          </p>
         </div>
-      </div>
-    </section>
+      </nav>
+    </>
   );
 }
 
-// ── Why NSA Section ───────────────────────────────────────────
-function Why() {
-  const pillars = [
-    {
-      icon: icons.map,
-      color: tk.gold,
-      title: 'The access no one else has',
-      body: 'The big ag-tech firms — Ceres Imaging, TerrAvion — need 500-plus acres to justify a flight. A 12-acre Adelaida block doesn\'t pencil for them. The wedding and real-estate drone crowd doesn\'t speak winery or ranch. That gap is the business.',
-    },
-    {
-      icon: icons.eye,
-      color: tk.sage,
-      title: 'Data, not footage',
-      body: 'A vineyard owner doesn\'t need a cinematic reel. They need to know which blocks are under stress before veraison, where the frost pockets formed in February, and whether the trellis damage they heard about from the neighbor is actually their problem or someone else\'s.',
-    },
-    {
-      icon: icons.pin,
-      color: tk.terra,
-      title: 'North County is a relationship market',
-      body: 'Paso Robles, Templeton, Adelaida — this is not a market you crack with Facebook ads. It\'s a market where you get in through warm introductions and stay in through reliable work. That\'s the moat. Cold calls don\'t get you past the gate here.',
-    },
-  ];
-
+// ── Hero ──────────────────────────────────────────────────────
+function Hero() {
+  const scrollTo = id => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   return (
-    <section id="why" style={{ background: tk.cream, padding: '100px 0' }}>
-      <div style={wrap}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '60px 80px', alignItems: 'start' }}>
-          <div>
-            <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: tk.sage, marginBottom: 16 }}>
-              Positioning
-            </div>
-            <h2 style={{ fontFamily: serif, fontSize: 'clamp(34px, 3.5vw, 48px)', fontWeight: 400, color: tk.body, margin: '0 0 28px', lineHeight: 1.1 }}>
-              Why North<br />SLO Aerial.
-            </h2>
-            <div style={{
-              background: tk.dark, borderRadius: 8,
-              padding: '24px 28px',
-              borderLeft: `3px solid ${tk.gold}`,
-            }}>
-              <p style={{
-                fontFamily: serif, fontSize: 17, fontStyle: 'italic',
-                lineHeight: 1.7, color: tk.cream, margin: 0,
-              }}>
-                "I fly a drone for small wineries and rural property owners in North SLO County
-                who need eyes on their land but can't justify a commercial ag-tech contract."
-              </p>
-            </div>
+    <section id="home" style={{
+      minHeight: '100svh',
+      background: `linear-gradient(145deg, ${C.ink} 0%, ${C.night} 55%, #0e2236 100%)`,
+      display: 'flex', alignItems: 'center',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Very subtle grid */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        backgroundImage: `linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px)`,
+        backgroundSize: '64px 64px',
+      }} />
+      {/* Radial glow top-right */}
+      <div style={{
+        position: 'absolute', top: '-10%', right: '-5%', width: 700, height: 700,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+
+      <div className="hero-inner" style={{ ...WRAP, width: '100%', display: 'flex', alignItems: 'center', gap: 72, paddingTop: 100, paddingBottom: 80 }}>
+
+        {/* Left: copy */}
+        <div style={{ flex: '0 0 auto', maxWidth: 560 }}>
+          <div style={{ animation: 'fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.1s both' }}>
+            <Eyebrow>North SLO County · Part 107 Certified</Eyebrow>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            {pillars.map(p => (
-              <div key={p.title} style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: 10, flexShrink: 0,
-                  background: `${p.color}15`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Icon d={p.icon} size={22} color={p.color} />
-                </div>
-                <div>
-                  <h3 style={{ fontFamily: sans, fontSize: 15, fontWeight: 700, color: tk.body, margin: '0 0 8px', letterSpacing: 0.2 }}>
-                    {p.title}
-                  </h3>
-                  <p style={{ fontFamily: sans, fontSize: 15, lineHeight: 1.7, color: tk.muted, margin: 0 }}>
-                    {p.body}
-                  </p>
-                </div>
+
+          <h1 style={{
+            fontFamily: D, fontSize: 'clamp(60px, 7vw, 92px)', fontWeight: 400,
+            lineHeight: 1.0, color: C.cream,
+            letterSpacing: '-0.03em', margin: '0 0 30px',
+            animation: 'fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.2s both',
+          }}>
+            Eyes on<br />
+            <em style={{ color: C.gold, fontStyle: 'italic', fontWeight: 300 }}>your land.</em>
+          </h1>
+
+          <p style={{
+            fontFamily: U, fontSize: 17, lineHeight: 1.78, maxWidth: 480,
+            color: 'rgba(230,221,200,0.65)', margin: '0 0 48px',
+            animation: 'fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.32s both',
+          }}>
+            Precision drone mapping for small wineries and rural properties in North SLO County —
+            the operations the big ag-tech firms cannot profitably service.
+          </p>
+
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', animation: 'fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.42s both' }}>
+            <button onClick={() => scrollTo('services')}
+              style={{
+                background: C.gold, color: C.ink, border: 'none', cursor: 'pointer',
+                padding: '15px 32px', borderRadius: 4,
+                fontFamily: U, fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase',
+                display: 'flex', alignItems: 'center', gap: 10,
+                transition: 'background 0.2s, transform 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.goldD; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = C.gold; e.currentTarget.style.transform = 'none'; }}>
+              View Services
+              <span style={{ fontSize: 15 }}>→</span>
+            </button>
+            <button onClick={() => scrollTo('contact')}
+              style={{
+                background: 'transparent', color: C.cream,
+                border: '1px solid rgba(230,221,200,0.22)', cursor: 'pointer',
+                padding: '15px 32px', borderRadius: 4,
+                fontFamily: U, fontSize: 12, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase',
+                transition: 'border-color 0.2s, color 0.2s, transform 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(230,221,200,0.22)'; e.currentTarget.style.color = C.cream; e.currentTarget.style.transform = 'none'; }}>
+              Get a Free Map
+            </button>
+          </div>
+
+          {/* Stat strip */}
+          <div style={{
+            display: 'flex', gap: 0, marginTop: 72,
+            borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 36,
+            animation: 'fadeUp 0.9s cubic-bezier(0.16,1,0.3,1) 0.55s both',
+            flexWrap: 'wrap',
+          }}>
+            {[
+              ['FAA Part 107', 'Certified & insured'],
+              ['15 – 200 ac', 'Service sweet spot'],
+              ['7 days', 'Report turnaround'],
+              ['$0', 'First portfolio flight'],
+            ].map(([num, label], i) => (
+              <div key={num} style={{
+                paddingRight: 40, marginRight: i < 3 ? 40 : 0,
+                borderRight: i < 3 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                marginBottom: 16,
+              }}>
+                <div style={{ fontFamily: D, fontSize: 26, fontWeight: 400, color: C.cream, letterSpacing: '-0.01em' }}>{num}</div>
+                <div style={{ fontFamily: U, fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.muted, marginTop: 4 }}>{label}</div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Right: aerial map */}
+        <div className="hero-map" style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ position: 'relative', animation: 'fadeUp 1.1s cubic-bezier(0.16,1,0.3,1) 0.4s both' }}>
+            <AerialMap />
+            {/* Floating coord badge */}
+            <div style={{
+              position: 'absolute', top: -16, right: -16,
+              background: 'rgba(6,9,15,0.9)', border: '1px solid rgba(201,168,76,0.2)',
+              borderRadius: 4, padding: '8px 12px',
+              fontFamily: 'monospace', fontSize: 10,
+              color: 'rgba(201,168,76,0.7)', letterSpacing: '0.08em',
+              backdropFilter: 'blur(8px)',
+            }}>
+              35.6269° N · 120.6910° W
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scroll hint */}
+      <div style={{
+        position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        animation: 'fadeIn 1s ease 1.2s both',
+      }}>
+        <span style={{ fontFamily: U, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.faint }}>Scroll</span>
+        <div style={{ width: 1, height: 40, background: `linear-gradient(${C.faint}, transparent)` }} />
       </div>
     </section>
   );
 }
 
-// ── Process Section ───────────────────────────────────────────
-function Process() {
-  const steps = [
-    {
-      n: '01',
-      title: 'Schedule a flight',
-      body: 'Reach out by email or phone. We\'ll talk through your property, confirm the season\'s priority (frost mapping before April, canopy stress mapping before harvest), and schedule a site visit. First-time clients in the portfolio period fly for free.',
-    },
-    {
-      n: '02',
-      title: 'One to two hours on-site',
-      body: 'A single visit covers most vineyards under 50 acres and most ranch monitoring flights. We do the preflight plan, fly the mission, and confirm data quality before leaving the property. You don\'t need to be there, though you\'re welcome to be.',
-    },
-    {
-      n: '03',
-      title: 'Report in your inbox within 7 days',
-      body: 'You receive a georeferenced map file plus a clear PDF report — no portals, no dashboards, no subscriptions to manage. Findings are written in plain language. Frost pockets, canopy gaps, fence damage, structural concerns — flagged directly, without jargon.',
-    },
+// ── Services ──────────────────────────────────────────────────
+function Services() {
+  return (
+    <section id="services" style={{ background: C.deep, padding: '110px 0' }}>
+      <div style={WRAP}>
+        <Reveal>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 64, flexWrap: 'wrap', gap: 20 }}>
+            <div>
+              <Eyebrow>Service Lines</Eyebrow>
+              <h2 style={{ fontFamily: D, fontSize: 'clamp(40px,4vw,58px)', fontWeight: 400, color: C.cream, lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+                Four services.<br />One network.
+              </h2>
+            </div>
+            <p style={{ fontFamily: U, fontSize: 14.5, lineHeight: 1.75, color: C.muted, maxWidth: 380 }}>
+              Sequenced by speed-to-first-dollar and relationship leverage —
+              not by what the drone is capable of.
+            </p>
+          </div>
+        </Reveal>
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          {SERVICES.map((svc, i) => (
+            <Reveal key={svc.id} delay={i * 0.05}>
+              <ServiceRow svc={svc} index={i} isLast={i === SERVICES.length - 1} />
+            </Reveal>
+          ))}
+        </div>
+
+        {/* Year-2 teaser */}
+        <Reveal delay={0.2}>
+          <div style={{
+            marginTop: 48, borderRadius: 6, padding: '28px 36px',
+            border: '1px dashed rgba(255,255,255,0.08)',
+            display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
+          }}>
+            <div style={{ fontFamily: D, fontSize: 48, fontWeight: 300, color: 'rgba(201,168,76,0.10)', lineHeight: 1 }}>05</div>
+            <div>
+              <div style={{ fontFamily: U, fontSize: 10, letterSpacing: '0.20em', textTransform: 'uppercase', color: C.faint, marginBottom: 6 }}>Year 2+ — Content & Legacy</div>
+              <div style={{ fontFamily: D, fontSize: 24, color: 'rgba(230,221,200,0.38)' }}>Historic Site & Abandoned-Place Documentation</div>
+            </div>
+            <p style={{ fontFamily: U, fontSize: 13, color: 'rgba(138,158,181,0.55)', lineHeight: 1.65, flex: 1, minWidth: 220, margin: 0 }}>
+              The YouTube, the songs, the eventual coffee-table book. Every historic-site flight is portfolio content.
+              Not a day-one priority. A decade-long asset.
+            </p>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+// ── Why ───────────────────────────────────────────────────────
+function Why() {
+  const pillars = [
+    { label: 'The Gap', color: C.gold, title: 'The clients nobody else serves', body: "The big ag-tech firms need 500+ acres to justify a flight. A 12-acre Adelaida block doesn't pencil for them. The wedding drone crowd doesn't speak winery. That gap is the business." },
+    { label: 'The Data', color: C.sage, title: 'Data products, not footage', body: 'A vineyard owner does not need a cinematic reel. They need to know which blocks are under stress before veraison, where frost pockets formed in February, and whether the trellis damage they heard about is their problem or a neighbor\'s.' },
+    { label: 'The Market', color: C.terra, title: 'North County runs on introductions', body: 'Paso Robles, Templeton, Adelaida — this market does not crack with Facebook ads. You get in through warm introductions and stay in through reliable, consistent work. That relationship layer is the moat.' },
   ];
 
   return (
-    <section id="process" style={{ background: tk.slate, padding: '100px 0' }}>
-      <div style={wrap}>
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
-          <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: tk.gold, marginBottom: 16 }}>
-            How It Works
-          </div>
-          <h2 style={{ fontFamily: serif, fontSize: 'clamp(32px, 3.5vw, 48px)', fontWeight: 400, color: tk.cream, margin: '0 0 18px', lineHeight: 1.1 }}>
-            Simple by design.
-          </h2>
-          <p style={{ fontFamily: sans, fontSize: 16, color: tk.mist, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
-            No app to download, no portal to log into, no account to manage. A flight, a report, and a relationship.
-          </p>
-        </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: 2,
-          borderRadius: 12,
-          overflow: 'hidden',
-        }}>
-          {steps.map((s, i) => (
-            <div key={s.n} style={{
-              background: tk.slateL,
-              padding: '44px 36px',
-              position: 'relative',
+    <section id="why" style={{ background: C.cream, padding: '120px 0' }}>
+      <div style={WRAP}>
+        <Reveal>
+          <div style={{ textAlign: 'center', maxWidth: 800, margin: '0 auto 80px' }}>
+            <div style={{ height: 1, background: 'rgba(42,53,69,0.14)', marginBottom: 56 }} />
+            <p style={{
+              fontFamily: D, fontStyle: 'italic', fontWeight: 300,
+              fontSize: 'clamp(28px,3.2vw,44px)', lineHeight: 1.38,
+              color: C.body, letterSpacing: '-0.01em',
             }}>
-              <div style={{
-                fontFamily: serif, fontSize: 64, fontWeight: 400,
-                color: 'rgba(196,169,74,0.15)',
-                lineHeight: 1, marginBottom: 24,
-                letterSpacing: -2,
-              }}>{s.n}</div>
-              <h3 style={{ fontFamily: sans, fontSize: 17, fontWeight: 700, color: tk.cream, margin: '0 0 14px', letterSpacing: 0.2 }}>
-                {s.title}
-              </h3>
-              <p style={{ fontFamily: sans, fontSize: 14, lineHeight: 1.75, color: 'rgba(248,244,237,0.58)', margin: 0 }}>
-                {s.body}
-              </p>
-              {i < steps.length - 1 && (
-                <div style={{
-                  position: 'absolute', top: '50%', right: -12,
-                  width: 24, height: 2,
-                  background: 'rgba(196,169,74,0.3)',
-                  display: 'none', // hide on mobile; on wider screens this would show
-                }} />
-              )}
-            </div>
+              "I fly a drone for small wineries and rural property owners
+              in North SLO County who need eyes on their land but cannot
+              justify a commercial ag-tech contract."
+            </p>
+            <div style={{ height: 1, background: 'rgba(42,53,69,0.14)', marginTop: 56 }} />
+          </div>
+        </Reveal>
+
+        <div className="why-cols" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0 64px' }}>
+          {pillars.map((p, i) => (
+            <Reveal key={p.label} delay={i * 0.12}>
+              <div style={{ paddingTop: 44 }}>
+                <Eyebrow color={p.color} dark>{p.label}</Eyebrow>
+                <h3 style={{ fontFamily: D, fontSize: 26, fontWeight: 400, color: C.body, marginBottom: 14, lineHeight: 1.2 }}>
+                  {p.title}
+                </h3>
+                <p style={{ fontFamily: U, fontSize: 15, lineHeight: 1.78, color: '#5a6e82' }}>
+                  {p.body}
+                </p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -606,183 +738,155 @@ function Process() {
   );
 }
 
-// ── Pricing Section ───────────────────────────────────────────
-function Pricing() {
-  return (
-    <section id="pricing" style={{ background: tk.parch, padding: '100px 0' }}>
-      <div style={wrap}>
-        <div style={{ marginBottom: 60 }}>
-          <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: tk.terra, marginBottom: 16 }}>
-            Pricing
-          </div>
-          <h2 style={{ fontFamily: serif, fontSize: 'clamp(32px, 3.5vw, 48px)', fontWeight: 400, color: tk.body, margin: '0 0 18px', lineHeight: 1.1 }}>
-            No hidden fees.<br />No surprise invoices.
-          </h2>
-          <p style={{ fontFamily: sans, fontSize: 16, lineHeight: 1.7, color: tk.muted, maxWidth: 560, margin: 0 }}>
-            Pricing is published because it builds trust and saves everyone a negotiation that neither party enjoys.
-            All rates are for North SLO County. Complex terrain and coastal work may carry a surcharge.
-          </p>
-        </div>
+// ── Process ───────────────────────────────────────────────────
+function Process() {
+  const steps = [
+    { n: '01', title: 'Schedule a flight', body: "Reach out by email or phone. We'll confirm your property, the season's priority, and schedule a site visit. First-time clients in the portfolio phase fly for free — no catch." },
+    { n: '02', title: 'One to two hours on-site', body: "A single visit covers most vineyards under 50 acres and most ranch monitoring flights. We preflight, fly the mission, and confirm data quality before leaving. You don't need to be there." },
+    { n: '03', title: 'Report in your inbox', body: "A georeferenced map file plus a plain-language PDF report — no portals, no dashboards, no accounts to manage. Frost pockets, canopy gaps, fence damage, structural concerns — flagged directly, within 7 days." },
+  ];
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-          {[
-            {
-              label: 'Vineyard Mapping',
-              color: tk.gold,
-              rows: [
-                ['Under 20 acres', '$300'],
-                ['20–50 acres', '$450'],
-                ['Repeat visit (same season)', '$250'],
-                ['Deliverable', 'Orthomosaic + PDF report'],
-                ['Turnaround', '7 days'],
-              ],
-            },
-            {
-              label: 'Ranch Monitoring',
-              color: tk.sage,
-              rows: [
-                ['Onboarding flight', '$600 one-time'],
-                ['Monthly visits', '$150 / month'],
-                ['Weekly visits', '$400 / month'],
-                ['Deliverable', 'PDF report + GPS photos'],
-                ['Turnaround', 'Within 24 hours'],
-              ],
-            },
-            {
-              label: 'Pre-Listing Maps',
-              color: tk.terra,
-              rows: [
-                ['Under 50 acres', '$750'],
-                ['50–200 acres', '$1,100'],
-                ['200+ acres', '$1,500+'],
-                ['Deliverable', '4K video + ortho + MLS stills'],
-                ['Turnaround', '7–10 days'],
-              ],
-            },
-            {
-              label: 'Bluff Erosion Doc',
-              color: tk.mist,
-              rows: [
-                ['Individual homeowner', '$400 / quarter'],
-                ['HOA (5+ properties)', '$1,200 / quarter'],
-                ['Annual archive sub', '$1,500 / year'],
-                ['Includes', 'Storm-event flights'],
-                ['Deliverable', 'Quarterly report + archive'],
-              ],
-            },
-          ].map(({ label, color, rows }) => (
-            <div key={label} style={{
-              background: '#fff',
-              borderRadius: 10,
-              overflow: 'hidden',
-              boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-            }}>
-              <div style={{
-                background: tk.dark,
-                padding: '18px 24px',
-                borderBottom: `3px solid ${color}`,
-              }}>
-                <span style={{ fontFamily: sans, fontSize: 13, fontWeight: 700, letterSpacing: 0.5, color: tk.cream }}>
-                  {label}
-                </span>
-              </div>
-              <div style={{ padding: '8px 0' }}>
-                {rows.map(([k, v]) => (
-                  <div key={k} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '11px 24px',
-                    borderBottom: `1px solid ${tk.parch}`,
+  return (
+    <section id="process" style={{ background: C.slate, padding: '110px 0' }}>
+      <div style={WRAP}>
+        <Reveal>
+          <div style={{ textAlign: 'center', marginBottom: 72 }}>
+            <Eyebrow>Process</Eyebrow>
+            <h2 style={{ fontFamily: D, fontSize: 'clamp(36px,4vw,54px)', fontWeight: 400, color: C.cream, lineHeight: 1.06, letterSpacing: '-0.02em' }}>
+              Simple by design.
+            </h2>
+            <p style={{ fontFamily: U, fontSize: 15.5, color: C.muted, maxWidth: 440, margin: '18px auto 0', lineHeight: 1.72 }}>
+              No app to download. No portal to log into. A flight, a report, and a relationship.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="proc-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
+          {steps.map((s, i) => (
+            <React.Fragment key={s.n}>
+              <Reveal delay={i * 0.1} style={{ flex: 1 }}>
+                <div style={{ flex: 1, padding: '0 20px', textAlign: 'center' }}>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: '50%', margin: '0 auto 28px',
+                    border: `1px solid rgba(201,168,76,0.25)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(201,168,76,0.06)',
                   }}>
-                    <span style={{ fontFamily: sans, fontSize: 12, color: tk.muted }}>{k}</span>
-                    <span style={{ fontFamily: sans, fontSize: 13, fontWeight: 600, color: tk.body, textAlign: 'right', maxWidth: '55%' }}>{v}</span>
+                    <span style={{ fontFamily: D, fontSize: 20, fontWeight: 400, color: C.gold }}>{s.n}</span>
+                  </div>
+                  <h3 style={{ fontFamily: D, fontSize: 24, fontWeight: 400, color: C.cream, marginBottom: 14, lineHeight: 1.2 }}>{s.title}</h3>
+                  <p style={{ fontFamily: U, fontSize: 14, lineHeight: 1.78, color: 'rgba(138,158,181,0.75)' }}>{s.body}</p>
+                </div>
+              </Reveal>
+              {i < steps.length - 1 && (
+                <div className="proc-line" style={{ flex: '0 0 auto', paddingTop: 26, alignSelf: 'flex-start' }}>
+                  <div style={{ width: 80, height: 1, background: 'rgba(201,168,76,0.15)' }} />
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Pricing ───────────────────────────────────────────────────
+function Pricing() {
+  const cols = [
+    { label: 'Vineyard Mapping', color: C.gold, rows: [['Under 20 acres','$300'],['20–50 acres','$450'],['Repeat visit, same season','$250'],['Turnaround','7 days'],['Deliverable','Orthomosaic + PDF']] },
+    { label: 'Ranch Monitoring', color: C.sage, rows: [['Onboarding (one-time)','$600'],['Monthly visits','$150/mo'],['Weekly visits','$400/mo'],['Turnaround','24 hours'],['Deliverable','GPS report + photos']] },
+    { label: 'Pre-Listing Maps', color: C.terra, rows: [['Under 50 acres','$750'],['50–200 acres','$1,100'],['200+ acres','$1,500+'],['Turnaround','7–10 days'],['Deliverable','Video + ortho + MLS stills']] },
+    { label: 'Bluff Documentation', color: '#6a9ab0', rows: [['Individual homeowner','$400/qtr'],['HOA (5+ properties)','$1,200/qtr'],['Annual archive sub','$1,500/yr'],['Includes','Storm-event flights'],['Deliverable','Report + archive']] },
+  ];
+
+  return (
+    <section id="pricing" style={{ background: C.cream, padding: '110px 0' }}>
+      <div style={WRAP}>
+        <Reveal>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 56, flexWrap: 'wrap', gap: 20 }}>
+            <div>
+              <Eyebrow color={C.terra} dark>Pricing</Eyebrow>
+              <h2 style={{ fontFamily: D, fontSize: 'clamp(36px,4vw,54px)', fontWeight: 400, color: C.body, lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+                No hidden fees.
+              </h2>
+            </div>
+            <p style={{ fontFamily: U, fontSize: 14, lineHeight: 1.75, color: '#5a6e82', maxWidth: 360 }}>
+              Published pricing builds trust and saves everyone a negotiation
+              nobody enjoys. Complex terrain may carry a surcharge.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+          {cols.map((col, ci) => (
+            <Reveal key={col.label} delay={ci * 0.08}>
+              <div style={{ background: '#fff', borderRadius: 6, overflow: 'hidden', boxShadow: '0 1px 12px rgba(0,0,0,0.07)' }}>
+                <div style={{ background: C.ink, padding: '16px 20px', borderBottom: `2.5px solid ${col.color}` }}>
+                  <span style={{ fontFamily: U, fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: C.cream }}>
+                    {col.label}
+                  </span>
+                </div>
+                {col.rows.map(([k, v]) => (
+                  <div key={k} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                    padding: '12px 20px', borderBottom: `1px solid ${C.sand}`,
+                    gap: 8,
+                  }}>
+                    <span style={{ fontFamily: U, fontSize: 11.5, color: '#7a8e9e', lineHeight: 1.4 }}>{k}</span>
+                    <span style={{ fontFamily: D, fontSize: 17, fontWeight: 400, color: C.body, textAlign: 'right', flexShrink: 0 }}>{v}</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
 
-        <div style={{
-          marginTop: 40,
-          background: tk.dark, borderRadius: 10, padding: '28px 36px',
-          display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
-        }}>
-          <Icon d={icons.eye} size={28} color={tk.gold} />
-          <div>
-            <div style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, color: tk.cream, marginBottom: 4 }}>
-              First map is free.
-            </div>
-            <div style={{ fontFamily: sans, fontSize: 14, color: 'rgba(248,244,237,0.6)', lineHeight: 1.6 }}>
-              While we build the portfolio, the first vineyard or ranch flight is complimentary for introductions through the Riley network.
-              Job #4 onward charges at the rates above. There is no catch and no upsell buried in the free visit.
+        <Reveal delay={0.25}>
+          <div style={{
+            marginTop: 32, background: C.ink, borderRadius: 6,
+            padding: '28px 36px', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
+          }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.gold, flexShrink: 0 }} />
+            <div>
+              <span style={{ fontFamily: U, fontSize: 13, fontWeight: 700, color: C.cream }}>First map is free. </span>
+              <span style={{ fontFamily: U, fontSize: 13, color: 'rgba(230,221,200,0.55)', lineHeight: 1.7 }}>
+                While the portfolio is being built, the first vineyard or ranch flight is complimentary
+                for introductions through the network. Job four onward charges at the rates above.
+                No catch and no upsell buried in the free visit.
+              </span>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
 }
 
-// ── Trust / Credentials Section ───────────────────────────────
+// ── Trust ─────────────────────────────────────────────────────
 function Trust() {
-  const creds = [
-    {
-      icon: icons.cert,
-      color: tk.gold,
-      title: 'FAA Part 107 Certified',
-      body: 'The commercial UAS certificate required by federal law for any compensated drone operation. Renewed every 24 months.',
-    },
-    {
-      icon: icons.shield,
-      color: tk.sage,
-      title: '$1M Liability Coverage',
-      body: 'Annual hull and liability policy through a drone-specialist carrier. Certificate of insurance available on request before any flight.',
-    },
-    {
-      icon: icons.drone,
-      color: tk.mist,
-      title: 'DJI Mini 4 Pro',
-      body: '4K/60fps video, 48MP stills, obstacle avoidance, 3-axis gimbal stabilization. The right tool for vineyards under 200 acres.',
-    },
-    {
-      icon: icons.map,
-      color: tk.terra,
-      title: 'Local knowledge',
-      body: 'Paso Robles, Templeton, Adelaida, Creston, Shandon, San Miguel, Cambria, Cayucos. Know the roads, the landowners, the growing seasons.',
-    },
+  const items = [
+    { color: C.gold, title: 'FAA Part 107 Certified', body: 'The commercial UAS certificate required by federal law for any compensated drone operation. Renewed every 24 months.' },
+    { color: C.sage, title: '$1M Liability Coverage', body: 'Annual hull and liability policy through a drone-specialist carrier. Certificate of insurance on request before any flight.' },
+    { color: '#6a9ab0', title: 'DJI Mini 4 Pro', body: '4K/60fps, 48MP stills, obstacle avoidance, 3-axis gimbal stabilization. The right tool for properties under 200 acres.' },
+    { color: C.terra, title: 'Local Knowledge', body: 'Paso, Templeton, Adelaida, Creston, Shandon, San Miguel, Cambria, Cayucos. The roads, the landowners, the growing seasons.' },
   ];
 
   return (
-    <section style={{ background: tk.dark, padding: '80px 0' }}>
-      <div style={wrap}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 1,
-          borderRadius: 10,
-          overflow: 'hidden',
-          border: `1px solid ${tk.border}`,
-        }}>
-          {creds.map((c, i) => (
-            <div key={c.title} style={{
-              background: i % 2 === 0 ? tk.slate : tk.slateL,
-              padding: '36px 28px',
-              borderRight: i < creds.length - 1 ? `1px solid ${tk.border}` : 'none',
-            }}>
+    <section style={{ background: C.night, padding: '80px 0' }}>
+      <div style={WRAP}>
+        <div className="trust-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 1, borderRadius: 6, overflow: 'hidden' }}>
+          {items.map((item, i) => (
+            <Reveal key={item.title} delay={i * 0.07}>
               <div style={{
-                width: 48, height: 48, borderRadius: 10, marginBottom: 20,
-                background: `${c.color}18`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: i % 2 === 0 ? C.deep : C.slate,
+                padding: '36px 28px', height: '100%',
               }}>
-                <Icon d={c.icon} size={22} color={c.color} />
+                <div style={{ width: 36, height: 2, background: item.color, marginBottom: 20, borderRadius: 1 }} />
+                <h3 style={{ fontFamily: U, fontSize: 13.5, fontWeight: 700, color: C.cream, marginBottom: 12, letterSpacing: '0.02em' }}>{item.title}</h3>
+                <p style={{ fontFamily: U, fontSize: 13, lineHeight: 1.72, color: 'rgba(138,158,181,0.75)' }}>{item.body}</p>
               </div>
-              <h3 style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, color: tk.cream, margin: '0 0 10px', letterSpacing: 0.3 }}>
-                {c.title}
-              </h3>
-              <p style={{ fontFamily: sans, fontSize: 13, lineHeight: 1.7, color: 'rgba(248,244,237,0.5)', margin: 0 }}>
-                {c.body}
-              </p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -790,58 +894,49 @@ function Trust() {
   );
 }
 
-// ── Coverage Section ──────────────────────────────────────────
+// ── Coverage ──────────────────────────────────────────────────
 function Coverage() {
   const zones = [
     { zone: 'Wine Country Core', places: ['Paso Robles', 'Templeton', 'Adelaida District', 'Willow Creek District', 'York Mountain'] },
-    { zone: 'East Paso & Range', places: ['Creston', 'Shandon', 'San Miguel', 'Cholame Valley', 'Cypress Mountain Rd corridor'] },
+    { zone: 'East Paso & Range', places: ['Creston', 'Shandon', 'San Miguel', 'Cholame Valley', 'Cypress Mountain Road'] },
     { zone: 'Coastal', places: ['Cambria', 'Cayucos', 'Morro Bay vicinity', 'Highway 1 corridor'] },
     { zone: 'South County', places: ['Atascadero', 'Santa Margarita', 'Pozo Valley'] },
   ];
 
   return (
-    <section id="coverage" style={{ background: tk.cream, padding: '100px 0' }}>
-      <div style={wrap}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '60px 80px', alignItems: 'start' }}>
-          <div>
-            <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: tk.sage, marginBottom: 16 }}>
-              Coverage Area
+    <section id="coverage" style={{ background: C.cream, padding: '110px 0' }}>
+      <div style={WRAP}>
+        <div className="cov-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 100px', alignItems: 'start' }}>
+          <Reveal>
+            <div>
+              <Eyebrow color={C.sage} dark>Coverage Area</Eyebrow>
+              <h2 style={{ fontFamily: D, fontSize: 'clamp(36px,4vw,52px)', fontWeight: 400, color: C.body, lineHeight: 1.06, letterSpacing: '-0.02em', marginBottom: 24 }}>
+                North SLO County.<br /><em style={{ fontWeight: 300, fontStyle: 'italic' }}>All of it.</em>
+              </h2>
+              <p style={{ fontFamily: U, fontSize: 15, lineHeight: 1.78, color: '#5a6e82', marginBottom: 20 }}>
+                From the Adelaida ridgeline to the coastal bluffs at Cambria, from San Miguel
+                to the oak savanna of Santa Margarita. That local knowledge — which gates, which roads,
+                which properties to watch — is part of the product.
+              </p>
+              <p style={{ fontFamily: U, fontSize: 15, lineHeight: 1.78, color: '#7a8e9e' }}>
+                Properties outside this territory are quoted on request.
+                Travel to Monterey County or Santa Barbara County carries a mileage surcharge.
+              </p>
             </div>
-            <h2 style={{ fontFamily: serif, fontSize: 'clamp(32px, 3.5vw, 48px)', fontWeight: 400, color: tk.body, margin: '0 0 24px', lineHeight: 1.1 }}>
-              North SLO County.<br />
-              All of it.
-            </h2>
-            <p style={{ fontFamily: sans, fontSize: 15, lineHeight: 1.75, color: tk.muted, margin: '0 0 24px' }}>
-              From the Adelaida ridgeline to the coastal bluffs at Cambria, from San Miguel in the north to the oak savanna of Santa Margarita in the south.
-              This is the territory. Flying it requires knowing which properties are off which roads, which gates have which locks,
-              and who to call when something looks wrong. That local knowledge is part of the product.
-            </p>
-            <p style={{ fontFamily: sans, fontSize: 15, lineHeight: 1.75, color: tk.muted, margin: 0 }}>
-              Properties outside this territory can be quoted on request.
-              Travel days to Monterey County or Santa Barbara County carry a mileage surcharge.
-            </p>
-          </div>
+          </Reveal>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {zones.map(z => (
-              <div key={z.zone} style={{
-                background: '#fff', borderRadius: 8,
-                padding: '20px 24px',
-                boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-              }}>
-                <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', color: tk.terra, marginBottom: 10 }}>
-                  {z.zone}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {zones.map((z, i) => (
+              <Reveal key={z.zone} delay={i * 0.08}>
+                <div style={{ background: '#fff', borderRadius: 6, padding: '20px 24px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontFamily: U, fontSize: 9.5, letterSpacing: '0.20em', textTransform: 'uppercase', color: C.terra, marginBottom: 12 }}>{z.zone}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {z.places.map(p => (
+                      <span key={p} style={{ fontFamily: U, fontSize: 12, background: C.sand, borderRadius: 3, padding: '4px 10px', color: '#5a6e82' }}>{p}</span>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {z.places.map(p => (
-                    <span key={p} style={{
-                      fontFamily: sans, fontSize: 12,
-                      background: tk.parch, borderRadius: 4,
-                      padding: '4px 10px', color: tk.muted,
-                    }}>{p}</span>
-                  ))}
-                </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -850,285 +945,202 @@ function Coverage() {
   );
 }
 
-// ── Year-One Projection Section ───────────────────────────────
+// ── Projection ────────────────────────────────────────────────
 function Projection() {
   const rows = [
-    ['Vineyard mapping — single visit', '8 clients × $350', '$2,800'],
-    ['Vineyard mapping — repeat visit', '3 clients × $250', '$750'],
-    ['Ranch monitoring — monthly contracts', '2 × $150/mo × 12', '$3,600'],
+    ['Vineyard mapping — single visit', '8 × $350', '$2,800'],
+    ['Vineyard mapping — repeat visit', '3 × $250', '$750'],
+    ['Ranch monitoring — monthly contracts', '2 × $1,800 / yr', '$3,600'],
     ['Ranch monitoring — onboarding flights', '2 × $600', '$1,200'],
     ['Pre-listing property maps', '2 × $1,000', '$2,000'],
   ];
 
   return (
-    <section style={{ background: tk.slate, padding: '100px 0' }}>
-      <div style={wrapN}>
-        <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: tk.gold, marginBottom: 16 }}>
-            Year One Projection
+    <section style={{ background: C.slate, padding: '110px 0' }}>
+      <div style={WRAP_N}>
+        <Reveal>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <Eyebrow>Year One Projection</Eyebrow>
+            <h2 style={{ fontFamily: D, fontSize: 'clamp(34px,3.5vw,50px)', fontWeight: 400, color: C.cream, lineHeight: 1.06, letterSpacing: '-0.02em', marginBottom: 16 }}>
+              Conservative. Built on warm intros.
+            </h2>
+            <p style={{ fontFamily: U, fontSize: 15, color: C.muted, maxWidth: 480, margin: '0 auto', lineHeight: 1.72 }}>
+              This is the model if nothing goes wrong and nothing goes spectacularly right.
+              No paid advertising. No cold outreach.
+            </p>
           </div>
-          <h2 style={{ fontFamily: serif, fontSize: 'clamp(30px, 3.5vw, 44px)', fontWeight: 400, color: tk.cream, margin: '0 0 18px', lineHeight: 1.1 }}>
-            Conservative. Built on warm intros, not cold leads.
-          </h2>
-          <p style={{ fontFamily: sans, fontSize: 15, color: tk.mist, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
-            This is the model if nothing goes wrong and nothing goes spectacularly right.
-            No paid advertising. No cold outreach. Just the relationship network doing what relationship networks do.
-          </p>
-        </div>
+        </Reveal>
 
-        <div style={{ background: tk.slateL, borderRadius: 10, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: tk.dark }}>
-                {['Service Line', 'Basis', 'Annual'].map(h => (
-                  <th key={h} style={{
-                    fontFamily: sans, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-                    color: tk.mist, padding: '14px 24px', textAlign: 'left',
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(([service, basis, total], i) => (
-                <tr key={service} style={{ borderBottom: `1px solid ${tk.border}` }}>
-                  <td style={{ fontFamily: sans, fontSize: 13, color: tk.cream, padding: '14px 24px' }}>{service}</td>
-                  <td style={{ fontFamily: sans, fontSize: 12, color: tk.mist, padding: '14px 24px' }}>{basis}</td>
-                  <td style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, color: tk.gold, padding: '14px 24px' }}>{total}</td>
+        <Reveal delay={0.1}>
+          <div style={{ background: C.deep, borderRadius: 6, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: C.ink }}>
+                  {['Service Line', 'Basis', 'Annual'].map(h => (
+                    <th key={h} style={{ fontFamily: U, fontSize: 9.5, letterSpacing: '0.20em', textTransform: 'uppercase', color: C.faint, padding: '14px 24px', textAlign: 'left' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-              <tr style={{ background: 'rgba(196,169,74,0.08)' }}>
-                <td colSpan={2} style={{ fontFamily: sans, fontSize: 13, fontWeight: 700, color: tk.cream, padding: '18px 24px', letterSpacing: 0.5 }}>
-                  Year-one gross (conservative)
-                </td>
-                <td style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, color: tk.gold, padding: '18px 24px' }}>
-                  ~$10,350
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map(([svc, basis, total]) => (
+                  <tr key={svc} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ fontFamily: U, fontSize: 13, color: C.text, padding: '14px 24px' }}>{svc}</td>
+                    <td style={{ fontFamily: U, fontSize: 12, color: C.faint, padding: '14px 24px' }}>{basis}</td>
+                    <td style={{ fontFamily: D, fontSize: 20, color: C.gold, padding: '14px 24px', fontWeight: 400 }}>{total}</td>
+                  </tr>
+                ))}
+                <tr style={{ background: 'rgba(201,168,76,0.06)' }}>
+                  <td colSpan={2} style={{ fontFamily: U, fontSize: 12, fontWeight: 700, color: C.cream, padding: '18px 24px', letterSpacing: '0.06em' }}>Year-one gross (conservative)</td>
+                  <td style={{ fontFamily: D, fontSize: 28, color: C.gold, padding: '18px 24px', fontWeight: 400, letterSpacing: '-0.01em' }}>~$10,350</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20 }}>
-          <div style={{ background: tk.slateL, borderRadius: 8, padding: '24px 28px', borderLeft: `3px solid ${tk.sage}` }}>
-            <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: tk.cream, marginBottom: 8 }}>Year-one net</div>
-            <div style={{ fontFamily: serif, fontSize: 26, color: tk.sage }}>$6,500–$8,500</div>
-            <div style={{ fontFamily: sans, fontSize: 12, color: tk.mist, marginTop: 6, lineHeight: 1.5 }}>
-              After $1,000–$2,000 setup costs and $800 CA franchise tax (if applicable).
-            </div>
-          </div>
-          <div style={{ background: tk.slateL, borderRadius: 8, padding: '24px 28px', borderLeft: `3px solid ${tk.gold}` }}>
-            <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: tk.cream, marginBottom: 8 }}>Year-two target</div>
-            <div style={{ fontFamily: serif, fontSize: 26, color: tk.gold }}>$25,000–$40,000</div>
-            <div style={{ fontFamily: sans, fontSize: 12, color: tk.mist, marginTop: 6, lineHeight: 1.5 }}>
-              Ranch monitoring book grows to 8–12 contracts. Vineyard work compounds as repeat clients.
-            </div>
-          </div>
+        <div className="proj-cards" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+          {[
+            { label: 'Year-one net', val: '$6,500 – $8,500', sub: 'After $1–2K setup and $800 CA franchise tax if applicable', color: C.sage },
+            { label: 'Year-two target', val: '$25,000 – $40,000', sub: 'Ranch book at 8–12 contracts, vineyard work compounding as repeats', color: C.gold },
+          ].map(card => (
+            <Reveal key={card.label} delay={0.15}>
+              <div style={{
+                background: C.deep, borderRadius: 6, padding: '28px 28px',
+                borderLeft: `2.5px solid ${card.color}`,
+              }}>
+                <div style={{ fontFamily: U, fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.faint, marginBottom: 10 }}>{card.label}</div>
+                <div style={{ fontFamily: D, fontSize: 30, color: card.color, fontWeight: 400, letterSpacing: '-0.01em', marginBottom: 8 }}>{card.val}</div>
+                <div style={{ fontFamily: U, fontSize: 12, color: C.faint, lineHeight: 1.6 }}>{card.sub}</div>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-// ── Contact Section ───────────────────────────────────────────
+// ── Contact ───────────────────────────────────────────────────
 function Contact() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [sent, setSent] = useState(false);
+  const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSubmit = (e) => {
+  const submit = e => {
     e.preventDefault();
-    const subject = encodeURIComponent(`North SLO Aerial inquiry from ${name}`);
-    const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`);
-    window.location.href = `mailto:hello@northsloaerial.com?subject=${subject}&body=${body}`;
+    const sub = encodeURIComponent(`North SLO Aerial inquiry from ${form.name}`);
+    const body = encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`);
+    window.location.href = `mailto:hello@northsloaerial.com?subject=${sub}&body=${body}`;
     setSent(true);
   };
 
-  const inp = {
-    width: '100%', boxSizing: 'border-box',
-    background: tk.slateL,
-    border: `1px solid rgba(255,255,255,0.1)`,
-    borderRadius: 6, padding: '12px 16px',
-    fontFamily: sans, fontSize: 15, color: tk.cream,
-    outline: 'none', transition: 'border-color 0.2s',
+  const fieldStyle = {
+    width: '100%', background: 'transparent', border: 'none',
+    borderBottom: '1px solid rgba(230,221,200,0.15)',
+    padding: '14px 0', fontFamily: U, fontSize: 16,
+    color: C.cream, outline: 'none',
+    transition: 'border-color 0.25s',
   };
 
   return (
-    <section id="contact" style={{ background: tk.dark, padding: '100px 0' }}>
-      <div style={wrapN}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '60px 80px', alignItems: 'start' }}>
-          <div>
-            <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: tk.gold, marginBottom: 16 }}>
-              Get In Touch
-            </div>
-            <h2 style={{ fontFamily: serif, fontSize: 'clamp(32px, 3.5vw, 48px)', fontWeight: 400, color: tk.cream, margin: '0 0 24px', lineHeight: 1.1 }}>
-              Start with<br />a free map.
-            </h2>
-            <p style={{ fontFamily: sans, fontSize: 15, lineHeight: 1.75, color: tk.mist, margin: '0 0 36px' }}>
-              While the portfolio is being built, the first vineyard or ranch flight is complimentary.
-              It takes about an hour on your property. You get the map and the report back within a week.
-              If you like it, we talk about doing it again for pay. That's the whole pitch.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {[
-                ['North SLO County, California'],
-                ['FAA Part 107 · Insured · Local'],
-                ['Paso Robles · Templeton · Adelaida · Creston · Cambria'],
-              ].map(([txt]) => (
-                <div key={txt} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: tk.gold, flexShrink: 0 }} />
-                  <span style={{ fontFamily: sans, fontSize: 13, color: tk.mist }}>{txt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+    <section id="contact" style={{ background: C.ink, padding: '110px 0' }}>
+      <div style={WRAP}>
+        <div className="contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 100px', alignItems: 'start' }}>
 
-          <div>
+          {/* Left */}
+          <Reveal>
+            <div>
+              <Eyebrow>Get In Touch</Eyebrow>
+              <h2 style={{ fontFamily: D, fontSize: 'clamp(40px,4.5vw,62px)', fontWeight: 400, color: C.cream, lineHeight: 1.04, letterSpacing: '-0.02em', marginBottom: 28 }}>
+                Start with<br />
+                <em style={{ fontWeight: 300, fontStyle: 'italic', color: C.gold }}>a free map.</em>
+              </h2>
+              <p style={{ fontFamily: U, fontSize: 15, lineHeight: 1.78, color: 'rgba(138,158,181,0.8)', marginBottom: 48 }}>
+                While the portfolio is being built, the first vineyard or ranch flight is complimentary.
+                About an hour on your property. The map and report arrive within a week.
+                If you want it done again for pay, we talk then. That is the whole pitch.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 36 }}>
+                {['North SLO County, California', 'FAA Part 107  ·  $1M Insured  ·  Local', 'Paso Robles · Templeton · Adelaida · Creston · Cambria'].map(t => (
+                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.gold, flexShrink: 0 }} />
+                    <span style={{ fontFamily: U, fontSize: 13, color: C.faint }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Right: form */}
+          <Reveal delay={0.15}>
             {sent ? (
-              <div style={{
-                background: tk.slateL, borderRadius: 10,
-                padding: '40px 36px', textAlign: 'center',
-                border: `1px solid rgba(196,169,74,0.2)`,
-              }}>
-                <Icon d={icons.check} size={40} color={tk.gold} strokeWidth={2} />
-                <div style={{ fontFamily: serif, fontSize: 24, color: tk.cream, margin: '20px 0 12px' }}>
-                  Your email app is open.
+              <div style={{ paddingTop: 60, textAlign: 'center' }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', border: `1px solid ${C.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                 </div>
-                <p style={{ fontFamily: sans, fontSize: 14, color: tk.mist, lineHeight: 1.7, margin: 0 }}>
-                  Send the message when you're ready. We'll follow up within 48 hours.
-                </p>
+                <div style={{ fontFamily: D, fontSize: 32, fontWeight: 400, color: C.cream, marginBottom: 14 }}>Your mail app is open.</div>
+                <p style={{ fontFamily: U, fontSize: 14, color: C.muted, lineHeight: 1.7 }}>Send the message when you're ready. We'll follow up within 48 hours.</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontFamily: sans, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: tk.mist, marginBottom: 8 }}>Name</label>
-                  <input value={name} onChange={e => setName(e.target.value)} required placeholder="Your name"
-                    style={inp}
-                    onFocus={e => e.target.style.borderColor = 'rgba(196,169,74,0.5)'}
-                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontFamily: sans, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: tk.mist, marginBottom: 8 }}>Email</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="your@email.com"
-                    style={inp}
-                    onFocus={e => e.target.style.borderColor = 'rgba(196,169,74,0.5)'}
-                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontFamily: sans, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: tk.mist, marginBottom: 8 }}>What can we map?</label>
-                  <textarea value={message} onChange={e => setMessage(e.target.value)} required rows={5}
-                    placeholder="Tell us about your property — approximate acreage, location, what you're hoping to learn."
-                    style={{ ...inp, resize: 'vertical', lineHeight: 1.6 }}
-                    onFocus={e => e.target.style.borderColor = 'rgba(196,169,74,0.5)'}
-                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
+              <form onSubmit={submit} style={{ paddingTop: 60 }}>
+                {[
+                  { label: 'Name', key: 'name', type: 'text', placeholder: 'Your name' },
+                  { label: 'Email', key: 'email', type: 'email', placeholder: 'your@email.com' },
+                ].map(f => (
+                  <div key={f.key} style={{ marginBottom: 36 }}>
+                    <label style={{ display: 'block', fontFamily: U, fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.faint, marginBottom: 10 }}>{f.label}</label>
+                    <input type={f.type} value={form[f.key]} onChange={e => set(f.key)(e.target.value)}
+                      required placeholder={f.placeholder}
+                      style={fieldStyle}
+                      onFocus={e => e.target.style.borderBottomColor = 'rgba(201,168,76,0.6)'}
+                      onBlur={e => e.target.style.borderBottomColor = 'rgba(230,221,200,0.15)'} />
+                  </div>
+                ))}
+                <div style={{ marginBottom: 44 }}>
+                  <label style={{ display: 'block', fontFamily: U, fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.faint, marginBottom: 10 }}>What can we map?</label>
+                  <textarea value={form.message} onChange={e => set('message')(e.target.value)} required rows={4}
+                    placeholder="Property location, approximate acreage, and what you're hoping to learn."
+                    style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.6 }}
+                    onFocus={e => e.target.style.borderBottomColor = 'rgba(201,168,76,0.6)'}
+                    onBlur={e => e.target.style.borderBottomColor = 'rgba(230,221,200,0.15)'} />
                 </div>
                 <button type="submit" style={{
-                  background: tk.gold, color: tk.dark,
-                  border: 'none', borderRadius: 6, padding: '14px 28px',
-                  fontFamily: sans, fontSize: 14, fontWeight: 700,
-                  letterSpacing: 0.5, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  transition: 'background 0.2s',
+                  width: '100%', background: C.gold, color: C.ink,
+                  border: 'none', borderRadius: 4, padding: '16px',
+                  fontFamily: U, fontSize: 12, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase',
+                  cursor: 'pointer', transition: 'background 0.2s, transform 0.15s',
                 }}
-                  onMouseEnter={e => e.currentTarget.style.background = tk.goldD}
-                  onMouseLeave={e => e.currentTarget.style.background = tk.gold}>
-                  <Icon d={icons.mail} size={16} color={tk.dark} />
+                  onMouseEnter={e => { e.currentTarget.style.background = C.goldD; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = C.gold; e.currentTarget.style.transform = 'none'; }}>
                   Send Message
                 </button>
               </form>
             )}
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
-  );
-}
-
-// ── Nav ───────────────────────────────────────────────────────
-function Nav({ scrolled }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const links = ['Services', 'Why', 'Process', 'Pricing', 'Coverage', 'Contact'];
-
-  const scrollTo = (id) => {
-    setMenuOpen(false);
-    document.getElementById(id.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  return (
-    <nav style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      background: scrolled ? `${tk.dark}f0` : 'transparent',
-      backdropFilter: scrolled ? 'blur(12px)' : 'none',
-      borderBottom: scrolled ? `1px solid ${tk.border}` : 'none',
-      transition: 'all 0.3s ease',
-      padding: '0 24px',
-    }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 6,
-            background: tk.goldT, border: `1px solid rgba(196,169,74,0.25)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon d={icons.drone} size={16} color={tk.gold} />
-          </div>
-          <span style={{ fontFamily: serif, fontSize: 15, color: tk.cream, letterSpacing: 0.5, fontWeight: 400 }}>
-            North SLO Aerial
-          </span>
-        </div>
-
-        {/* Desktop links */}
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-          {links.map(l => (
-            <button key={l} onClick={() => scrollTo(l)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: sans, fontSize: 13, color: 'rgba(248,244,237,0.65)',
-                letterSpacing: 0.5, padding: 0, transition: 'color 0.2s',
-                display: window.innerWidth < 768 ? 'none' : 'block',
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = tk.cream}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(248,244,237,0.65)'}>
-              {l}
-            </button>
-          ))}
-          <button onClick={() => scrollTo('Contact')}
-            style={{
-              background: tk.gold, color: tk.dark,
-              border: 'none', borderRadius: 5, padding: '8px 18px',
-              fontFamily: sans, fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
-              cursor: 'pointer', whiteSpace: 'nowrap',
-              transition: 'background 0.2s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = tk.goldD}
-            onMouseLeave={e => e.currentTarget.style.background = tk.gold}>
-            Get a Free Map
-          </button>
-        </div>
-      </div>
-    </nav>
   );
 }
 
 // ── Footer ────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer style={{ background: '#080f17', padding: '48px 24px' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 24 }}>
+    <footer style={{ background: '#040710', padding: '40px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ ...WRAP, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 5,
-            background: tk.goldT, border: `1px solid rgba(196,169,74,0.2)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon d={icons.drone} size={14} color={tk.gold} />
+          <div style={{ width: 26, height: 26, borderRadius: 5, border: '1px solid rgba(201,168,76,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(201,168,76,0.06)' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="2.5" /><path d="M12 9.5V7M12 14.5v2.5M9.5 12H7M14.5 12h2.5" />
+              <path d="M5.5 5.5l2 2M16.5 16.5l2 2M5.5 18.5l2-2M16.5 7.5l2-2" />
+              <circle cx="4" cy="4" r="1.5" /><circle cx="20" cy="4" r="1.5" /><circle cx="4" cy="20" r="1.5" /><circle cx="20" cy="20" r="1.5" />
+            </svg>
           </div>
-          <span style={{ fontFamily: serif, fontSize: 14, color: 'rgba(248,244,237,0.5)' }}>North SLO Aerial</span>
+          <span style={{ fontFamily: D, fontSize: 14, color: 'rgba(230,221,200,0.40)', fontWeight: 400 }}>North SLO Aerial</span>
         </div>
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'center' }}>
           {['FAA Part 107 Certified', '$1M Liability Insurance', 'North SLO County, California'].map(t => (
-            <span key={t} style={{ fontFamily: sans, fontSize: 11, letterSpacing: 1, color: 'rgba(248,244,237,0.3)', textTransform: 'uppercase' }}>{t}</span>
+            <span key={t} style={{ fontFamily: U, fontSize: 10, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase' }}>{t}</span>
           ))}
         </div>
       </div>
@@ -1139,27 +1151,18 @@ function Footer() {
 // ── Root ──────────────────────────────────────────────────────
 export default function NorthSLOAerial() {
   const [scrolled, setScrolled] = useState(false);
-
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const fn = () => setScrolled(window.scrollY > 72);
+    window.addEventListener('scroll', fn, { passive: true });
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
   return (
-    <div style={{ fontFamily: sans, color: tk.body, overflowX: 'hidden' }}>
-      <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        body { background: ${tk.dark}; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-        @media (max-width: 700px) {
-          .two-col { grid-template-columns: 1fr !important; }
-          .service-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+    <div style={{ fontFamily: U, color: C.text }}>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <Nav scrolled={scrolled} />
       <Hero />
+      <Marquee />
       <Services />
       <Why />
       <Process />
