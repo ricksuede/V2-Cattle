@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import DMTPage from "./DMTPage.jsx";
 
 // ── Data ─────────────────────────────────────────────────────
 const INITIAL_CATTLE = [
@@ -463,6 +464,9 @@ function HerdApp() {
 // ── Root App ──────────────────────────────────────────────────
 export default function App() {
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("v2_auth") === "1");
+  const [showDMT, setShowDMT] = useState(() => window.location.hash === "#dmt");
+
+  if (showDMT) return <DMTPage onBack={() => { window.location.hash = ""; setShowDMT(false); }} />;
   if (!unlocked) return <PasswordGate onUnlock={() => { sessionStorage.setItem("v2_auth", "1"); setUnlocked(true); }} />;
   return <HerdApp />;
 }
