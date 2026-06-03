@@ -20,8 +20,8 @@ const C = {
   terra:  '#b84e28',
   steel:  '#6a9ab0',
 };
-const D = "'Cormorant Garamond', Georgia, serif";
-const U = "'Inter', system-ui, -apple-system, sans-serif";
+const D = "'Cinzel', 'Cormorant Garamond', Georgia, serif";
+const U = "'Josefin Sans', 'Inter', system-ui, -apple-system, sans-serif";
 const WRAP = { maxWidth: 1200, margin: '0 auto', padding: '0 52px' };
 
 // ── Aerial photos (Unsplash, free hotlink) ────────────────────
@@ -66,6 +66,9 @@ const CSS = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:none}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes blinkDot{0%,100%{opacity:1}50%{opacity:0.15}}
+  @keyframes pulseRing{0%{transform:scale(1);opacity:0.7}70%{transform:scale(2.2);opacity:0}100%{transform:scale(2.2);opacity:0}}
+  .pulse-dot{position:relative;display:inline-block;}
+  .pulse-dot::after{content:'';position:absolute;inset:0;border-radius:50%;background:currentColor;animation:pulseRing 1.8s ease-out infinite;}
   @keyframes imgReveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0% 0 0)}}
   @keyframes scaleIn{from{transform:scale(1.06)}to{transform:scale(1)}}
 
@@ -96,6 +99,24 @@ const CSS = `
     .gallery-strip{grid-template-columns:1fr!important;}
   }
 `;
+
+// ── Count-up animation ────────────────────────────────────────
+function useCountUp(target, duration = 1800, start = false) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    let startTime = null;
+    const step = ts => {
+      if (!startTime) startTime = ts;
+      const p = Math.min((ts - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(ease * target));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [start, target, duration]);
+  return val;
+}
 
 // ── Scroll reveal ─────────────────────────────────────────────
 function useReveal(threshold = 0.12) {
@@ -239,6 +260,30 @@ function Nav({ scrolled }) {
   );
 }
 
+// ── Hero stats with count-up ──────────────────────────────────
+function HeroStats() {
+  const [ref, vis] = useReveal(0.1);
+  const acres = useCountUp(200, 1600, vis);
+  const days = useCountUp(7, 1200, vis);
+  return (
+    <div ref={ref} style={{ display: 'flex', flexWrap: 'wrap' }}>
+      {[
+        { val: 'Part 107', suffix: '', label: 'FAA Certified & Insured' },
+        { val: `${acres}`, suffix: ' ac', label: 'Max property size' },
+        { val: `${days}`, suffix: ' days', label: 'Report turnaround' },
+        { val: '$0', suffix: '', label: 'First portfolio flight' },
+      ].map(({ val, suffix, label }, i) => (
+        <div key={label} style={{ paddingRight: 36, marginRight: i < 3 ? 36 : 0, borderRight: i < 3 ? '1px solid rgba(255,255,255,0.10)' : 'none', marginBottom: 12 }}>
+          <div style={{ fontFamily: D, fontSize: 24, color: C.cream, fontWeight: 500, letterSpacing: '0.04em' }}>
+            {val}<span style={{ fontSize: 16 }}>{suffix}</span>
+          </div>
+          <div style={{ fontFamily: U, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(138,158,181,0.8)', marginTop: 4 }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Hero — full-bleed aerial photo ────────────────────────────
 function Hero() {
   const go = id => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -293,14 +338,23 @@ function Hero() {
             </button>
           </div>
 
-          {/* Stat strip */}
-          <div style={{ display: 'flex', gap: 0, borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 32, flexWrap: 'wrap', backdropFilter: 'blur(4px)' }}>
-            {[['FAA Part 107', 'Certified & insured'], ['15–200 ac', 'Service sweet spot'], ['7 days', 'Report turnaround'], ['$0', 'First portfolio flight']].map(([n, l], i) => (
-              <div key={n} style={{ paddingRight: 36, marginRight: i < 3 ? 36 : 0, borderRight: i < 3 ? '1px solid rgba(255,255,255,0.10)' : 'none', marginBottom: 12 }}>
-                <div style={{ fontFamily: D, fontSize: 24, color: C.cream, fontWeight: 400, letterSpacing: '-0.01em' }}>{n}</div>
-                <div style={{ fontFamily: U, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(138,158,181,0.8)', marginTop: 4 }}>{l}</div>
+          {/* Credential badges */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 32 }}>
+            {[
+              { icon: '◈', label: 'FAA Part 107 Certified' },
+              { icon: '◉', label: '$1M Liability Insured' },
+              { icon: '◆', label: 'North SLO County Local' },
+            ].map(({ icon, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', border: `1px solid rgba(201,168,76,0.25)`, borderRadius: 2, background: 'rgba(201,168,76,0.07)', backdropFilter: 'blur(8px)' }}>
+                <span style={{ color: C.gold, fontSize: 10 }}>{icon}</span>
+                <span style={{ fontFamily: U, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(240,232,212,0.75)' }}>{label}</span>
               </div>
             ))}
+          </div>
+
+          {/* Stat strip */}
+          <div style={{ display: 'flex', gap: 0, borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 32, flexWrap: 'wrap', backdropFilter: 'blur(4px)' }}>
+            <HeroStats />
           </div>
         </div>
       </div>
@@ -380,7 +434,7 @@ function ServiceRow({ svc, isActive, isLast, onEnter }) {
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: svc.phaseColor, flexShrink: 0, display: 'inline-block' }} />
+            <span className="pulse-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: svc.phaseColor, flexShrink: 0, display: 'inline-block', color: svc.phaseColor }} />
             <span style={{ fontFamily: U, fontSize: 10, fontWeight: 600, letterSpacing: '0.20em', textTransform: 'uppercase', color: svc.phaseColor }}>{svc.phase}</span>
           </div>
           <h3 style={{ fontFamily: D, fontSize: 'clamp(26px,2.4vw,38px)', fontWeight: 400, color: C.text, lineHeight: 1.1, letterSpacing: '-0.01em' }}>{svc.title}</h3>
