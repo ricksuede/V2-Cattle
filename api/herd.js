@@ -1,12 +1,16 @@
 // GET  -> the herd document
 // PUT  -> replace the herd document
 // Both require a valid session cookie. The database credential stays server-side.
-const { pool, isAuthed } = require("./_lib.js");
+const { pool, isAuthed, SCHEMA_SQL } = require("./_lib.js");
 
 module.exports = async function handler(req, res) {
   if (!isAuthed(req)) return res.status(401).json({ error: "Not authenticated" });
 
   try {
+    // Idempotent, and cheap at this scale. Means a fresh database shows an empty
+    // herd rather than an error screen before it has been seeded.
+    await pool.query(SCHEMA_SQL);
+
     if (req.method === "GET") {
       const { rows } = await pool.query("SELECT data FROM herd_state WHERE id = 1");
       return res.status(200).json(rows.length ? rows[0].data : []);

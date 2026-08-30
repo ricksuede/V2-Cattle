@@ -15,6 +15,17 @@ const pool =
 
 const SESSION_HOURS = 12;
 
+// The whole herd is one JSON document. Four animals is not a four-table problem,
+// and the app has always read and written them as a unit. If this ever grows
+// multiple owners, add an owner_id column and one row per owner.
+const SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS herd_state (
+    id         integer PRIMARY KEY,
+    data       jsonb       NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  );
+`;
+
 function sign(expiresAt) {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("SESSION_SECRET is not set");
@@ -49,4 +60,4 @@ function isAuthed(req) {
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
 
-module.exports = { pool, issueCookie, isAuthed };
+module.exports = { pool, issueCookie, isAuthed, SCHEMA_SQL };
