@@ -1,12 +1,4 @@
-import React, { useState } from "react";
-
-// ── Data ─────────────────────────────────────────────────────
-const INITIAL_CATTLE = [
-  { id: "ishi", tag: "#Ishii", dob: "2024-06-27", sex: "Heifer", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "", sire: "Musashi", dam: "Otsu #209", grandSire: "", grandDam: "", weights: [], vaccinations: [{ date: "2024-10-30", product: "First Round Vaccines", mfg: "" }, { date: "2024-12-03", product: "Second Round Vaccines", mfg: "" }], brandCert: "", notes: "4 months old on 10/27/2024. Weaning started 12/18/2024." },
-  { id: "taki", tag: "#Taki", dob: "2025-06-21", sex: "Steer", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "", sire: "Musashi", dam: "Otsu #209", grandSire: "", grandDam: "", weights: [], vaccinations: [{ date: "2025-07-08", product: "Tetanus Shot", mfg: "" }, { date: "2025-07-24", product: "Tetanus Booster", mfg: "" }], brandCert: "", notes: "Banded 7/11/2025. Vaccines due November 2025. Weaning & 2nd round shots mid-December 2025. Fully weaned end of January 2026." },
-  { id: "203", tag: "Musashi #203", dob: "2022-03-08", sex: "Bull", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "Unknown", sire: "BarR Shigeshigetani 9B (AWA FB22453)", dam: "NR#16 (F1 Wagyu-Angus Cross Heifer)", grandSire: "BarR Full Blood Wagyu Bull", grandDam: "Commercial Angus Cow", weights: [{ date: "2022-09-22", weight: 492, event: "Weaning" }, { date: "2022-10-07", weight: 524, event: "Booster/Inspection" }], vaccinations: [{ date: "2022-09-22", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-09-22", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }, { date: "2022-09-22", product: "Cydectin Pour On (CDTN)", mfg: "Bayer HealthCare" }, { date: "2022-10-07", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-10-07", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }], brandCert: "204-IS-01970", notes: "Musashi. Original bull. Sire of Ishii and Taki." },
-  { id: "209", tag: "Otsu #209", dob: "2022-03-22", sex: "Cow", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "Unknown", sire: "BarR F77 (AWA FB37719)", dam: "NR#49 (F1)", grandSire: "BarR Full Blood Wagyu Bull", grandDam: "Commercial Angus Cow", weights: [{ date: "2022-09-22", weight: 451, event: "Weaning" }, { date: "2022-10-07", weight: 487, event: "Booster/Inspection" }], vaccinations: [{ date: "2022-09-22", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-09-22", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }, { date: "2022-09-22", product: "Cydectin Pour On (CDTN)", mfg: "Bayer HealthCare" }, { date: "2022-10-07", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-10-07", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }], brandCert: "204-IS-01970", notes: "Otsu. Original cow. Conceived 9/1/2024. Preg check ~10/30/2024 (confirmed 2 months pregnant). Due date 6/14/2025. Dam of Ishii and Taki." },
-];
+import React, { useState, useEffect } from "react";
 
 const EMPTY_ANIMAL = { tag: "", dob: "", sex: "Heifer", generation: "F1", bloodline: "", awaReg: "", sire: "", dam: "", grandSire: "", grandDam: "", weights: [], vaccinations: [], brandCert: "", notes: "" };
 const EMPTY_WEIGHT = { date: "", weight: "", event: "" };
@@ -88,13 +80,34 @@ function LabeledInput({ label, value, onChange, type = "text", placeholder }) {
   );
 }
 
+// ── Loading / error screen ────────────────────────────────────
+function Notice({ title, detail }) {
+  return (
+    <div style={{ minHeight: "100vh", background: "#2c2416", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif", padding: "0 24px", textAlign: "center" }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>🐄</div>
+      <div style={{ fontSize: 18, color: "#f5f0e8", fontWeight: "bold", marginBottom: 6 }}>{title}</div>
+      {detail && <div style={{ fontSize: 13, color: "#a89070", maxWidth: 320 }}>{detail}</div>}
+    </div>
+  );
+}
+
 // ── Password Gate ─────────────────────────────────────────────
 function PasswordGate({ onUnlock }) {
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
-  const attempt = () => {
-    if (input === "Vaquera") { onUnlock(); }
-    else { setError(true); setInput(""); setTimeout(() => setError(false), 2000); }
+  const [busy, setBusy] = useState(false);
+  const attempt = async () => {
+    if (busy || !input) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: input }),
+      });
+      if (res.ok) { onUnlock(); return; }
+    } catch { /* fall through to the error state below */ }
+    setBusy(false); setError(true); setInput(""); setTimeout(() => setError(false), 2000);
   };
   return (
     <div style={{ minHeight: "100vh", background: "#2c2416", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif" }}>
@@ -106,7 +119,7 @@ function PasswordGate({ onUnlock }) {
         <input type="password" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && attempt()} autoFocus
           style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: error ? "1px solid #c1440e" : "1px solid #5a4a35", background: "#2c2416", color: "#f5f0e8", fontSize: 16, fontFamily: "Georgia, serif", boxSizing: "border-box", outline: "none" }} />
         {error && <div style={{ color: "#c1440e", fontSize: 12, marginTop: 8 }}>Incorrect password</div>}
-        <button onClick={attempt} style={{ marginTop: 16, width: "100%", padding: "10px", background: "#c1440e", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontFamily: "Georgia, serif", fontWeight: "bold", cursor: "pointer" }}>Enter</button>
+        <button onClick={attempt} disabled={busy} style={{ marginTop: 16, width: "100%", padding: "10px", background: "#c1440e", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontFamily: "Georgia, serif", fontWeight: "bold", cursor: "pointer" }}>{busy ? "Checking…" : "Enter"}</button>
       </div>
     </div>
   );
@@ -250,11 +263,10 @@ function SpreadsheetView({ cattle, onBack, onPrint }) {
 }
 
 // ── Herd App (main logic) ─────────────────────────────────────
-function HerdApp() {
-  const [cattle, setCattle] = useState(() => {
-    try { const s = localStorage.getItem("v2_cattle"); return s ? JSON.parse(s) : INITIAL_CATTLE; } catch { return INITIAL_CATTLE; }
-  });
-  const saveCattle = (v) => { setCattle(v); try { localStorage.setItem("v2_cattle", JSON.stringify(v)); } catch {} };
+function HerdApp({ onUnauthorized }) {
+  const [cattle, setCattle] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("herd");
@@ -264,6 +276,41 @@ function HerdApp() {
   const [addWeightOpen, setAddWeightOpen] = useState(false);
   const [addVaxOpen, setAddVaxOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Load the herd once on mount. Every hook above this line runs unconditionally.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/herd")
+      .then(r => {
+        if (r.status === 401) { onUnauthorized(); return null; }
+        if (!r.ok) throw new Error("load failed");
+        return r.json();
+      })
+      .then(d => { if (alive && d) setCattle(d); })
+      .catch(() => { if (alive) setLoadError(true); });
+    return () => { alive = false; };
+  }, []);
+
+  // Optimistic write, rolled back if the server rejects it. Records tied to real
+  // invoices must never look saved when they aren't.
+  const saveCattle = (v) => {
+    const previous = cattle;
+    setCattle(v);
+    setSaveError(false);
+    fetch("/api/herd", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(v),
+    })
+      .then(r => {
+        if (r.status === 401) { onUnauthorized(); return; }
+        if (!r.ok) throw new Error("save failed");
+      })
+      .catch(() => { setCattle(previous); setSaveError(true); });
+  };
+
+  if (loadError) return <Notice title="Couldn't load records" detail="Check your connection, then reload the page." />;
+  if (cattle === null) return <Notice title="Loading records…" />;
 
   const selectedAnimal = cattle.find(c => c.id === selected);
   const goHerd = () => { setView("herd"); setSelected(null); setConfirmDelete(false); };
@@ -297,6 +344,11 @@ function HerdApp() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f0e8", fontFamily: "'Georgia', serif", color: "#2c2416" }}>
+      {saveError && (
+        <div style={{ background: "#c1440e", color: "#fff", padding: "10px 24px", fontSize: 13, textAlign: "center" }}>
+          That change could not be saved and has been undone. Check your connection and try again.
+        </div>
+      )}
       <div style={{ background: "#2c2416", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 11, letterSpacing: 3, color: "#a89070", textTransform: "uppercase", marginBottom: 2 }}>V2 Ranch</div>
@@ -463,6 +515,9 @@ function HerdApp() {
 // ── Root App ──────────────────────────────────────────────────
 export default function App() {
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("v2_auth") === "1");
+  // The cookie is the real gate; this flag only remembers which screen to show.
+  // If the session expires the API returns 401 and we drop back to the gate.
+  const lock = () => { sessionStorage.removeItem("v2_auth"); setUnlocked(false); };
   if (!unlocked) return <PasswordGate onUnlock={() => { sessionStorage.setItem("v2_auth", "1"); setUnlocked(true); }} />;
-  return <HerdApp />;
+  return <HerdApp onUnauthorized={lock} />;
 }
