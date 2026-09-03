@@ -342,9 +342,11 @@ function HerdApp() {
   const [addWeightOpen, setAddWeightOpen] = useState(false);
   const [addVaxOpen, setAddVaxOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
 
   const selectedAnimal = cattle.find(c => c.id === selected);
-  const goHerd = () => { setView("herd"); setSelected(null); setConfirmDelete(false); };
+  const goHerd = () => { setView("herd"); setSelected(null); setConfirmDelete(false); setEditingNotes(false); };
 
   if (view === "print") return <PrintPreview cattle={cattle} onClose={goHerd} />;
   if (view === "sheet") return <SpreadsheetView cattle={cattle} onBack={goHerd} onPrint={() => setView("print")} />;
@@ -498,12 +500,28 @@ function HerdApp() {
           </div>
 
           {/* Notes */}
-          {selectedAnimal.notes && (
-            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px", marginBottom: 16 }}>
-              <Divider title="Notes" />
-              <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, fontStyle: "italic" }}>{selectedAnimal.notes}</div>
-            </div>
-          )}
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px 24px", marginBottom: 16 }}>
+            <Divider title="Notes" action={
+              !editingNotes
+                ? <Btn onClick={() => { setNotesDraft(selectedAnimal.notes || ""); setEditingNotes(true); }} variant="ghost" small>✎ Edit</Btn>
+                : <div style={{ display: "flex", gap: 8 }}>
+                    <Btn onClick={() => {
+                      saveCattle(cattle.map(c => c.id === selected ? { ...c, notes: notesDraft } : c));
+                      setEditingNotes(false);
+                    }} variant="green" small>Save</Btn>
+                    <Btn onClick={() => setEditingNotes(false)} variant="ghost" small>Cancel</Btn>
+                  </div>
+            } />
+            {editingNotes ? (
+              <textarea value={notesDraft} onChange={e => setNotesDraft(e.target.value)} rows={5}
+                placeholder="Any notes about this animal..."
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.cream, fontSize: 14, fontFamily: "'Inter', sans-serif", lineHeight: 1.6, resize: "vertical" }} />
+            ) : (
+              <div style={{ color: selectedAnimal.notes ? T.muted : T.muted, fontSize: 14, lineHeight: 1.7, fontStyle: selectedAnimal.notes ? "italic" : "normal", opacity: selectedAnimal.notes ? 1 : 0.5 }}>
+                {selectedAnimal.notes || "No notes yet. Click Edit to add some."}
+              </div>
+            )}
+          </div>
 
           {/* Delete */}
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${T.border}` }}>
