@@ -1,12 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-// ── Data ─────────────────────────────────────────────────────
-const INITIAL_CATTLE = [
-  { id: "ishi", tag: "#Ishii", dob: "2024-06-27", sex: "Heifer", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "", sire: "Musashi", dam: "Otsu #209", grandSire: "", grandDam: "", weights: [], vaccinations: [{ date: "2024-10-30", product: "First Round Vaccines", mfg: "" }, { date: "2024-12-03", product: "Second Round Vaccines", mfg: "" }], brandCert: "", notes: "4 months old on 10/27/2024. Weaning started 12/18/2024." },
-  { id: "taki", tag: "#Taki", dob: "2025-06-21", sex: "Steer", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "", sire: "Musashi", dam: "Otsu #209", grandSire: "", grandDam: "", weights: [], vaccinations: [{ date: "2025-07-08", product: "Tetanus Shot", mfg: "" }, { date: "2025-07-24", product: "Tetanus Booster", mfg: "" }], brandCert: "", notes: "Banded 7/11/2025. Vaccines due November 2025. Weaning & 2nd round shots mid-December 2025. Fully weaned end of January 2026." },
-  { id: "203", tag: "Musashi #203", dob: "2022-03-08", sex: "Bull", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "Unknown", sire: "BarR Shigeshigetani 9B (AWA FB22453)", dam: "NR#16 (F1 Wagyu-Angus Cross Heifer)", grandSire: "BarR Full Blood Wagyu Bull", grandDam: "Commercial Angus Cow", weights: [{ date: "2022-09-22", weight: 492, event: "Weaning" }, { date: "2022-10-07", weight: 524, event: "Booster/Inspection" }], vaccinations: [{ date: "2022-09-22", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-09-22", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }, { date: "2022-09-22", product: "Cydectin Pour On (CDTN)", mfg: "Bayer HealthCare" }, { date: "2022-10-07", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-10-07", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }], brandCert: "204-IS-01970", notes: "Musashi. Original bull. Sire of Ishii and Taki." },
-  { id: "209", tag: "Otsu #209", dob: "2022-03-22", sex: "Cow", generation: "F2", bloodline: "75% Wagyu / 25% Angus", awaReg: "Unknown", sire: "BarR F77 (AWA FB37719)", dam: "NR#49 (F1)", grandSire: "BarR Full Blood Wagyu Bull", grandDam: "Commercial Angus Cow", weights: [{ date: "2022-09-22", weight: 451, event: "Weaning" }, { date: "2022-10-07", weight: 487, event: "Booster/Inspection" }], vaccinations: [{ date: "2022-09-22", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-09-22", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }, { date: "2022-09-22", product: "Cydectin Pour On (CDTN)", mfg: "Bayer HealthCare" }, { date: "2022-10-07", product: "ViraShield 6+L5 (VS6)", mfg: "Elanco" }, { date: "2022-10-07", product: "Ultrabac 8 (UB8)", mfg: "Zoetis" }], brandCert: "204-IS-01970", notes: "Otsu. Original cow. Conceived 9/1/2024. Preg check ~10/30/2024 (confirmed 2 months pregnant). Due date 6/14/2025. Dam of Ishii and Taki." },
-];
 
 const EMPTY_ANIMAL = { tag: "", dob: "", sex: "Heifer", generation: "F1", bloodline: "", awaReg: "", sire: "", dam: "", grandSire: "", grandDam: "", weights: [], vaccinations: [], brandCert: "", notes: "" };
 const EMPTY_WEIGHT = { date: "", weight: "", event: "" };
@@ -128,14 +121,37 @@ const Header = ({ actions, subtitle }) => (
   </div>
 );
 
+// ── Loading / error screen ────────────────────────────────────
+function Notice({ title, detail, children }) {
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: "0 24px", textAlign: "center" }}>
+      <style>{GLOBAL_STYLES}</style>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>🐄</div>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: T.cream, fontWeight: 700, marginBottom: 8 }}>{title}</div>
+      {detail && <div style={{ fontSize: 13, color: T.muted, maxWidth: 320, lineHeight: 1.6 }}>{detail}</div>}
+      {children && <div style={{ display: "flex", gap: 10, marginTop: 20 }}>{children}</div>}
+    </div>
+  );
+}
+
 // ── Password Gate ─────────────────────────────────────────────
 function PasswordGate({ onUnlock }) {
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
-  const attempt = () => {
-    if (input === "Vaquera") { onUnlock(); }
-    else { setError(true); setShake(true); setInput(""); setTimeout(() => { setError(false); setShake(false); }, 2000); }
+  const [busy, setBusy] = useState(false);
+  const attempt = async () => {
+    if (busy || !input) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: input }),
+      });
+      if (res.ok) { onUnlock(); return; }
+    } catch { /* fall through to the error state below */ }
+    setBusy(false); setError(true); setShake(true); setInput(""); setTimeout(() => { setError(false); setShake(false); }, 2000);
   };
   return (
     <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", position: "relative", overflow: "hidden" }}>
@@ -154,8 +170,8 @@ function PasswordGate({ onUnlock }) {
         <input type="password" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && attempt()} autoFocus
           style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: `1px solid ${error ? T.danger : T.border}`, background: T.bg, color: T.cream, fontSize: 16, fontFamily: "'Inter', sans-serif", outline: "none", marginBottom: error ? 8 : 16, transition: "border-color 0.2s" }} />
         {error && <div style={{ color: "#e06060", fontSize: 12, marginBottom: 14, textAlign: "center" }}>Incorrect password</div>}
-        <button onClick={attempt} style={{ width: "100%", padding: "13px", background: `linear-gradient(135deg, ${T.gold}, ${T.goldLight})`, color: T.bg, border: "none", borderRadius: 10, fontSize: 14, fontFamily: "'Inter', sans-serif", fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}>
-          ENTER
+        <button onClick={attempt} disabled={busy} style={{ width: "100%", padding: "13px", background: `linear-gradient(135deg, ${T.gold}, ${T.goldLight})`, color: T.bg, border: "none", borderRadius: 10, fontSize: 14, fontFamily: "'Inter', sans-serif", fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}>
+          {busy ? "CHECKING…" : "ENTER"}
         </button>
       </div>
 
@@ -328,11 +344,11 @@ function SpreadsheetView({ cattle, onBack, onPrint }) {
 }
 
 // ── Herd App ──────────────────────────────────────────────────
-function HerdApp() {
-  const [cattle, setCattle] = useState(() => {
-    try { const s = localStorage.getItem("v2_cattle"); return s ? JSON.parse(s) : INITIAL_CATTLE; } catch { return INITIAL_CATTLE; }
-  });
-  const saveCattle = (v) => { setCattle(v); try { localStorage.setItem("v2_cattle", JSON.stringify(v)); } catch {} };
+function HerdApp({ onUnauthorized }) {
+  const [cattle, setCattle] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [localHerd, setLocalHerd] = useState(null);
 
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("herd");
@@ -344,6 +360,59 @@ function HerdApp() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
+
+  // Load the herd once on mount. Every hook above this line runs unconditionally.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/herd")
+      .then(r => {
+        if (r.status === 401) { onUnauthorized(); return null; }
+        if (!r.ok) throw new Error("load failed");
+        return r.json();
+      })
+      .then(d => {
+        if (!alive || !d) return;
+        // One-time migration: an empty database plus records saved in this
+        // browser means this device holds the herd. Offer to upload it.
+        if (d.length === 0) {
+          try {
+            const local = JSON.parse(localStorage.getItem("v2_cattle"));
+            if (Array.isArray(local) && local.length) setLocalHerd(local);
+          } catch { /* no usable local copy */ }
+        }
+        setCattle(d);
+      })
+      .catch(() => { if (alive) setLoadError(true); });
+    return () => { alive = false; };
+  }, []);
+
+  // Optimistic write, rolled back if the server rejects it. Records tied to real
+  // invoices must never look saved when they aren't.
+  const saveCattle = (v) => {
+    const previous = cattle;
+    setCattle(v);
+    setSaveError(false);
+    fetch("/api/herd", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(v),
+    })
+      .then(r => {
+        if (r.status === 401) { onUnauthorized(); return; }
+        if (!r.ok) throw new Error("save failed");
+      })
+      .catch(() => { setCattle(previous); setSaveError(true); });
+  };
+
+  if (loadError) return <Notice title="Couldn't load records" detail="Check your connection, then reload the page." />;
+  if (cattle === null) return <Notice title="Loading records…" />;
+  // The copy in this browser is never deleted, so it stays as a backup.
+  if (localHerd) return (
+    <Notice title="Records found on this device" detail={`The database is empty, and this device has ${localHerd.length} animals saved from before. Upload them to the database?`}>
+      <Btn onClick={() => { saveCattle(localHerd); setLocalHerd(null); }}>Upload {localHerd.length} animals</Btn>
+      <Btn onClick={() => setLocalHerd(null)} variant="ghost">Skip</Btn>
+    </Notice>
+  );
 
   const selectedAnimal = cattle.find(c => c.id === selected);
   const goHerd = () => { setView("herd"); setSelected(null); setConfirmDelete(false); setEditingNotes(false); };
@@ -390,6 +459,11 @@ function HerdApp() {
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter', sans-serif" }}>
       <style>{GLOBAL_STYLES}</style>
+      {saveError && (
+        <div style={{ background: T.danger, color: T.cream, padding: "10px 24px", fontSize: 13, textAlign: "center", position: "sticky", top: 0, zIndex: 10 }}>
+          That change could not be saved and has been undone. Check your connection and try again.
+        </div>
+      )}
 
       {view === "herd" && <>
         <Header subtitle="Cattle Records" actions={<>
@@ -972,6 +1046,9 @@ Notes: ${animal.notes || "None"}
 // ── Root ──────────────────────────────────────────────────────
 export default function App() {
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("v2_auth") === "1");
+  // The cookie is the real gate; this flag only remembers which screen to show.
+  // If the session expires the API returns 401 and we drop back to the gate.
+  const lock = () => { sessionStorage.removeItem("v2_auth"); setUnlocked(false); };
   if (!unlocked) return <PasswordGate onUnlock={() => { sessionStorage.setItem("v2_auth", "1"); setUnlocked(true); }} />;
-  return <HerdApp />;
+  return <HerdApp onUnauthorized={lock} />;
 }

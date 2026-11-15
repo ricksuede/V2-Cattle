@@ -1,0 +1,166 @@
+[
+  {
+    "id": "ishi",
+    "tag": "#Ishii",
+    "dob": "2024-06-27",
+    "sex": "Heifer",
+    "generation": "F2",
+    "bloodline": "75% Wagyu / 25% Angus",
+    "awaReg": "",
+    "sire": "Musashi",
+    "dam": "Otsu #209",
+    "grandSire": "",
+    "grandDam": "",
+    "weights": [],
+    "vaccinations": [
+      {
+        "date": "2024-10-30",
+        "product": "First Round Vaccines",
+        "mfg": ""
+      },
+      {
+        "date": "2024-12-03",
+        "product": "Second Round Vaccines",
+        "mfg": ""
+      }
+    ],
+    "brandCert": "",
+    "notes": "4 months old on 10/27/2024. Weaning started 12/18/2024."
+  },
+  {
+    "id": "taki",
+    "tag": "#Taki",
+    "dob": "2025-06-21",
+    "sex": "Steer",
+    "generation": "F2",
+    "bloodline": "75% Wagyu / 25% Angus",
+    "awaReg": "",
+    "sire": "Musashi",
+    "dam": "Otsu #209",
+    "grandSire": "",
+    "grandDam": "",
+    "weights": [],
+    "vaccinations": [
+      {
+        "date": "2025-07-08",
+        "product": "Tetanus Shot",
+        "mfg": ""
+      },
+      {
+        "date": "2025-07-24",
+        "product": "Tetanus Booster",
+        "mfg": ""
+      }
+    ],
+    "brandCert": "",
+    "notes": "Banded 7/11/2025. Vaccines due November 2025. Weaning & 2nd round shots mid-December 2025. Fully weaned end of January 2026."
+  },
+  {
+    "id": "203",
+    "tag": "Musashi #203",
+    "dob": "2022-03-08",
+    "sex": "Bull",
+    "generation": "F2",
+    "bloodline": "75% Wagyu / 25% Angus",
+    "awaReg": "Unknown",
+    "sire": "BarR Shigeshigetani 9B (AWA FB22453)",
+    "dam": "NR#16 (F1 Wagyu-Angus Cross Heifer)",
+    "grandSire": "BarR Full Blood Wagyu Bull",
+    "grandDam": "Commercial Angus Cow",
+    "weights": [
+      {
+        "date": "2022-09-22",
+        "weight": 492,
+        "event": "Weaning"
+      },
+      {
+        "date": "2022-10-07",
+        "weight": 524,
+        "event": "Booster/Inspection"
+      }
+    ],
+    "vaccinations": [
+      {
+        "date": "2022-09-22",
+        "product": "ViraShield 6+L5 (VS6)",
+        "mfg": "Elanco"
+      },
+      {
+        "date": "2022-09-22",
+        "product": "Ultrabac 8 (UB8)",
+        "mfg": "Zoetis"
+      },
+      {
+        "date": "2022-09-22",
+        "product": "Cydectin Pour On (CDTN)",
+        "mfg": "Bayer HealthCare"
+      },
+      {
+        "date": "2022-10-07",
+        "product": "ViraShield 6+L5 (VS6)",
+        "mfg": "Elanco"
+      },
+      {
+        "date": "2022-10-07",
+        "product": "Ultrabac 8 (UB8)",
+        "mfg": "Zoetis"
+      }
+    ],
+    "brandCert": "204-IS-01970",
+    "notes": "Musashi. Original bull. Sire of Ishii and Taki."
+  },
+  {
+    "id": "209",
+    "tag": "Otsu #209",
+    "dob": "2022-03-22",
+    "sex": "Cow",
+    "generation": "F2",
+    "bloodline": "75% Wagyu / 25% Angus",
+    "awaReg": "Unknown",
+    "sire": "BarR F77 (AWA FB37719)",
+    "dam": "NR#49 (F1)",
+    "grandSire": "BarR Full Blood Wagyu Bull",
+    "grandDam": "Commercial Angus Cow",
+    "weights": [
+      {
+        "date": "2022-09-22",
+        "weight": 451,
+        "event": "Weaning"
+      },
+      {
+        "date": "2022-10-07",
+        "weight": 487,
+        "event": "Booster/Inspection"
+      }
+    ],
+    "vaccinations": [
+      {
+        "date": "2022-09-22",
+        "product": "ViraShield 6+L5 (VS6)",
+        "mfg": "Elanco"
+      },
+      {
+        "date": "2022-09-22",
+        "product": "Ultrabac 8 (UB8)",
+        "mfg": "Zoetis"
+      },
+      {
+        "date": "2022-09-22",
+        "product": "Cydectin Pour On (CDTN)",
+        "mfg": "Bayer HealthCare"
+      },
+      {
+        "date": "2022-10-07",
+        "product": "ViraShield 6+L5 (VS6)",
+        "mfg": "Elanco"
+      },
+      {
+        "date": "2022-10-07",
+        "product": "Ultrabac 8 (UB8)",
+        "mfg": "Zoetis"
+      }
+    ],
+    "brandCert": "204-IS-01970",
+    "notes": "Otsu. Original cow. Conceived 9/1/2024. Preg check ~10/30/2024 (confirmed 2 months pregnant). Due date 6/14/2025. Dam of Ishii and Taki."
+  }
+]
