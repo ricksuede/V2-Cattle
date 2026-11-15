@@ -24,6 +24,10 @@ const SCHEMA_SQL = `
     data       jsonb       NOT NULL,
     updated_at timestamptz NOT NULL DEFAULT now()
   );
+  -- Supabase exposes the public schema through its Data API. With RLS on and
+  -- no policies, that API can't read this table; these routes connect as the
+  -- table owner, which bypasses RLS.
+  ALTER TABLE herd_state ENABLE ROW LEVEL SECURITY;
 `;
 
 function sign(expiresAt) {
